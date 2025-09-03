@@ -1,0 +1,29 @@
+{
+    "name":  "todo-fullstack",
+    "version":  "1.0.0",
+    "description":  "",
+    "main":  "index.js",
+    "scripts":  {
+                    "dev":  "concurrently \"npm run server\" \"npm run client\"",
+                    "client":  "cd client \u0026\u0026 npm run dev",
+                    "server":  "node server.js",
+                    "build":  "cd client \u0026\u0026 npm install \u0026\u0026 npm run build",
+                    "start":  "npm run build \u0026\u0026 npm run server"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "dependencies":  {
+                         "body-parser":  "^2.2.0",
+                         "cors":  "^2.8.5",
+                         "express":  "^5.1.0"
+                     },
+    "devDependencies":  {
+                            "concurrently":  "^9.2.1"
+                        },
+    "engines":  {
+                    "node":  "\u003e=18"
+                }
+}
