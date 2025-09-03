@@ -5,7 +5,7 @@ export default function App() {
   // ====== CONFIG CONTACTO ======
   // Reemplaza por tu número con formato: cod_pais + cod_area + numero (sin + ni 0 inicial).
   // Ejemplo para Argentina (Corrientes): 549377XYYYYY
-  const whatsapp = "PON_TU_NUMERO_AQUI_EJ_549377123456";
+  const whatsapp = "5493777416857";
   const waHref = whatsapp ? `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web` : null;
 
   // ====== DATOS CV ======
@@ -189,3 +189,4 @@ export default function App() {
     </div>
   );
 }
+
