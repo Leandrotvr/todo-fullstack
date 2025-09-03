@@ -160,7 +160,7 @@ export default function App() {
           </div>
 
           <div style={{marginTop: 10}}>
-            <h2 style={s.h2}>Proyecto destacado</h2>
+            <h2 style={s.h2}>Proyecto fullstack</h2>
             <ul style={s.list}>
               {cv.proyectos.map((p, i) => (
                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
@@ -172,3 +172,4 @@ export default function App() {
     </div>
   );
 }
+
