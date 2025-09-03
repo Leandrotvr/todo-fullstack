@@ -2,12 +2,9 @@
 import axios from "axios";
 
 export default function App() {
-  // ====== CONTACTO ======
-  // WhatsApp en E.164 sin '+' ni ceros: ya configurado
   const whatsapp = "5493777416857";
   const waHref = `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web`;
 
-  // ====== DATOS CV ======
   const cv = {
     nombre: "Leandro Maciel",
     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
@@ -16,13 +13,8 @@ export default function App() {
     perfil:
       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
     competencias: [
-      "Comunicación clara",
-      "Gestión del tiempo",
-      "Atención al cliente",
-      "Redacción y edición",
-      "Trabajo remoto",
-      "Autonomía",
-      "Trabajo en equipo",
+      "Comunicación clara","Gestión del tiempo","Atención al cliente",
+      "Redacción y edición","Trabajo remoto","Autonomía","Trabajo en equipo",
       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
     ],
     potencial: [
@@ -34,10 +26,7 @@ export default function App() {
       "Docencia/tutorías online (Geografía y Cs. Sociales)",
       "Redacción y estandarización de plantillas/procesos",
     ],
-    // ⬇️ Solo tu To-Do actual en producción
-    proyectos: [
-      { t: "To-Do List (Live)", url: "https://todo-fullstack-30wd.onrender.com/" }
-    ],
+    proyectos: [{ t: "To-Do List (Live)", url: "https://todo-fullstack-30wd.onrender.com/" }],
   };
 
   // ====== TODO LIST ======
@@ -58,44 +47,36 @@ export default function App() {
       inputRef.current?.focus();
     });
   };
-
   const toggleTodo = (id) => {
     axios.put(`/api/todos/${id}`).then(() => {
       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
     });
   };
-
   const deleteTodo = (id) => {
     axios.delete(`/api/todos/${id}`).then(() => {
       setTodos(prev => prev.filter(t => t.id !== id));
     });
   };
 
-  // ====== ESTILOS ======
+  // ====== ESTILOS (inline para UI; CSS @media print los sobreescribe) ======
   const s = {
     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
-
     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
     small: { color: "#aaa", fontSize: 14 },
-
     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
-
     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
-
     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
-
     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
     name: { fontSize: 28, fontWeight: 800, margin: 0 },
     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
     meta: { margin: 0, color: "#bdbdbd" },
     link: { color: "#7db7ff", textDecoration: "none" },
-
     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
     list: { margin: 0, paddingLeft: 18 }
   };
@@ -104,14 +85,15 @@ export default function App() {
     <div style={s.page}>
       <div style={s.wrap}>
         {/* ====== TODO LIST PRIMERO ====== */}
-        <section style={s.card}>
+        <section className="pdf-card" style={s.card}>
           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
           <p style={s.small}>
             <strong>Hecha con:</strong> React + Vite (frontend), Node.js + Express (backend), Axios, API REST (JSON), CORS.{" "}
             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
           </p>
 
-          <form onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
+          {/* Ocultamos el formulario al imprimir */}
+          <form className="hide-print" onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
             <input
               ref={inputRef}
               value={text}
@@ -129,13 +111,15 @@ export default function App() {
             {todos.map(t => (
               <li key={t.id} style={s.li}>
                 <span
+                  className="pdf-task"
                   style={s.todoText(t.done)}
                   onClick={() => toggleTodo(t.id)}
                   title="Marcar / desmarcar"
                 >
                   {t.text}
                 </span>
-                <button onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
+                {/* Ocultamos controles de eliminar al imprimir */}
+                <button className="hide-print" onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
                   Eliminar
                 </button>
               </li>
@@ -143,8 +127,8 @@ export default function App() {
           </ul>
         </section>
 
-        {/* ====== BANNER CV DESPUÉS ====== */}
-        <section style={s.banner}>
+        {/* ====== BANNER CV ====== */}
+        <section className="pdf-card" style={s.banner}>
           <h1 style={s.name}>{cv.nombre}</h1>
           <p style={s.sub}>{cv.titular}</p>
           <p style={s.meta}>
@@ -152,7 +136,8 @@ export default function App() {
             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
             {" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a>
             {" · "}
-            <button onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
+            {/* Ocultamos el botón de imprimir en el propio PDF */}
+            <button className="hide-print" onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
               Imprimir / Descargar PDF
             </button>
           </p>

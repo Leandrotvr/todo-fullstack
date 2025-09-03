@@ -66,3 +66,19 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+/* === PRINT STYLES === */
+@media print {
+  @page { margin: 12mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { background: #fff !important; color: #000 !important; }
+  a { color: #000 !important; text-decoration: none; }
+  .hide-print { display: none !important; }
+  /* Quitar bordes/colores oscuros de tarjetas para PDF limpio */
+  .pdf-card {
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+    color: #000 !important;
+  }
+  /* Texto de tareas más legible en PDF */
+  .pdf-task { color: #000 !important; }
+}
