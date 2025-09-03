@@ -1601,4 +1601,57 @@ branch 'main' set up to track 'origin/main'.
 PS C:\Users\Leandro\Documents\todo-fullstack>
 PS C:\Users\Leandro\Documents\todo-fullstack> # 5) Abrir repo
 PS C:\Users\Leandro\Documents\todo-fullstack> Start-Process https://github.com/Leandrotvr/todo-fullstack
+PS C:\Users\Leandro\Documents\todo-fullstack> # 0) Ir al proyecto
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location C:\Users\Leandro\Documents\todo-fullstack
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Asegurar scripts/engine en package.json
+PS C:\Users\Leandro\Documents\todo-fullstack> $json = Get-Content package.json -Raw | ConvertFrom-Json
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['scripts']) { $json | Add-Member -NotePropertyName scripts -NotePropertyValue ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force server 'node server.js') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force build  'cd client && npm install && npm run build') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force start  'npm run build && npm run server') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['engines']) { $json | Add-Member engines ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.engines | Add-Member -Force node '>=18') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> $json | ConvertTo-Json -Depth 10 | Set-Content package.json
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) render.yaml (Blueprint de Render)
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> services:
+>>   - type: web
+>>     name: todo-fullstack
+>>     env: node
+>>     plan: free
+>>     buildCommand: npm install && npm run build
+>>     startCommand: npm run server
+>> '@ | Set-Content render.yaml
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) .gitignore seguro
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> node_modules/
+>> client/node_modules/
+>> client/dist/
+>> .env
+>> .DS_Store
+>> '@ | Set-Content .gitignore
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Commit y push
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'render.yaml', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "chore: add render.yaml + scripts for Render"
+[main 1b21e4c] chore: add render.yaml + scripts for Render
+ 2 files changed, 60 insertions(+), 2 deletions(-)
+PS C:\Users\Leandro\Documents\todo-fullstack> git branch -M main 2>$null
+PS C:\Users\Leandro\Documents\todo-fullstack> git remote set-url origin https://github.com/Leandrotvr/todo-fullstack
+PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
+Enumerating objects: 7, done.
+Counting objects: 100% (7/7), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 969 bytes | 484.00 KiB/s, done.
+Total 4 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+To https://github.com/Leandrotvr/todo-fullstack
+   b9b5a76..1b21e4c  main -> main
+branch 'main' set up to track 'origin/main'.
 PS C:\Users\Leandro\Documents\todo-fullstack>
