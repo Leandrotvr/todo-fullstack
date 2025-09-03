@@ -2,11 +2,10 @@
 import axios from "axios";
 
 export default function App() {
-  // ====== CONFIG CONTACTO ======
-  // Reemplaza por tu número con formato: cod_pais + cod_area + numero (sin + ni 0 inicial).
-  // Ejemplo para Argentina (Corrientes): 549377XYYYYY
+  // ====== CONTACTO ======
+  // WhatsApp en E.164 sin '+' ni ceros: ya configurado
   const whatsapp = "5493777416857";
-  const waHref = whatsapp ? `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web` : null;
+  const waHref = `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web`;
 
   // ====== DATOS CV ======
   const cv = {
@@ -28,17 +27,16 @@ export default function App() {
     ],
     potencial: [
       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
-      "Customer Support (chat/email) con KPIs de satisfacción",
+      "Customer Support (chat/email)",
       "Data Entry / Data Ops en planillas y CRMs",
       "QA Manual junior (pruebas funcionales, reporte de bugs)",
       "Soporte técnico básico (software y cuentas)",
-      "Docencia/tutorías online en Geografía y Cs. Sociales",
+      "Docencia/tutorías online (Geografía y Cs. Sociales)",
       "Redacción y estandarización de plantillas/procesos",
     ],
+    // ⬇️ Solo tu To-Do actual en producción
     proyectos: [
-      { t: "To Do List Fullstack", url: "https://mi-to-do-list.onrender.com/" },
-      { t: "Foro Fullstack", url: "https://foro-front.onrender.com/" },
-      { t: "Gestor de clientes / Facturación", url: "https://facturas-mvp.onrender.com/" },
+      { t: "To-Do List (Live)", url: "https://todo-fullstack-30wd.onrender.com/" }
     ],
   };
 
@@ -105,7 +103,7 @@ export default function App() {
   return (
     <div style={s.page}>
       <div style={s.wrap}>
-        {/* ====== TODO LIST PRIMERO (con presentación arriba) ====== */}
+        {/* ====== TODO LIST PRIMERO ====== */}
         <section style={s.card}>
           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
           <p style={s.small}>
@@ -152,8 +150,13 @@ export default function App() {
           <p style={s.meta}>
             📍 {cv.ubicacion}
             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
-            {waHref ? <>{" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a></> : null}
+            {" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a>
+            {" · "}
+            <button onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
+              Imprimir / Descargar PDF
+            </button>
           </p>
+
           <p style={{marginTop: 12}}>{cv.perfil}</p>
 
           <div style={s.grid2}>
@@ -172,21 +175,15 @@ export default function App() {
           </div>
 
           <div style={{marginTop: 10}}>
-            <h2 style={s.h2}>Proyectos Fullstack</h2>
+            <h2 style={s.h2}>Proyecto destacado</h2>
             <ul style={s.list}>
               {cv.proyectos.map((p, i) => (
                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
               ))}
             </ul>
           </div>
-
-          <p style={s.small}>
-            ¿Te interesa? <a style={s.link} href={`mailto:${cv.email}?subject=Contacto%20por%20CV%20web`}>Contactar por email</a>
-            {" · "}<a style={s.link} href="/CV-Leandro-Maciel.pdf" download>Descargar CV (PDF)</a>
-          </p>
         </section>
       </div>
     </div>
   );
 }
-
