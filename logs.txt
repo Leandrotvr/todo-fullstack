@@ -1,0 +1,1545 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. Todos los derechos reservados.
+
+Instale la versión más reciente de PowerShell para obtener nuevas características y mejoras. https://aka.ms/PSWindows
+
+PS C:\Users\Leandro> # === RUTAS ===
+PS C:\Users\Leandro> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro> $CLIENT = Join-Path $ROOT "client"
+PS C:\Users\Leandro> $APP    = Join-Path $CLIENT "src\App.jsx"
+PS C:\Users\Leandro>
+PS C:\Users\Leandro> # 1) Ir a la carpeta del frontend
+PS C:\Users\Leandro> Set-Location $CLIENT
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Asegurar deps del client (por las dudas)
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install axios | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Reescribir COMPLETO App.jsx con mejoras:
+PS C:\Users\Leandro\Documents\todo-fullstack\client> #    - Enter envía el formulario (onSubmit)
+PS C:\Users\Leandro\Documents\todo-fullstack\client> #    - Botón "Eliminar" claro (sin ?)
+PS C:\Users\Leandro\Documents\todo-fullstack\client> #    - Evita agregar vacío, re-enfoca input, estilos mínimos
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
+>> import { useState, useEffect, useRef } from "react";
+>> import axios from "axios";
+>>
+>> export default function App() {
+>>   const [todos, setTodos] = useState([]);
+>>   const [text, setText] = useState("");
+>>   const inputRef = useRef(null);
+>>
+>>   useEffect(() => {
+>>     axios.get("/api/todos").then(res => setTodos(res.data));
+>>   }, []);
+>>
+>>   const addTodo = () => {
+>>     const v = text.trim();
+>>     if (!v) return;
+>>     axios.post("/api/todos", { text: v }).then(res => {
+>>       setTodos(prev => [...prev, res.data]);
+>>       setText("");
+>>       inputRef.current?.focus();
+>>     });
+>>   };
+>>
+>>   const toggleTodo = (id) => {
+>>     axios.put(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+>>     });
+>>   };
+>>
+>>   const deleteTodo = (id) => {
+>>     axios.delete(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.filter(t => t.id !== id));
+>>     });
+>>   };
+>>
+>>   const handleSubmit = (e) => {
+>>     e.preventDefault(); // Enter = Agregar
+>>     addTodo();
+>>   };
+>>
+>>   const styles = {
+>>     page: { padding: 20, maxWidth: 720, margin: "0 auto", fontFamily: "system-ui, sans-serif", color: "#eee", background: "#1e1e1e", minHeight: "100vh" },
+>>     title: { fontSize: 48, fontWeight: 800, marginBottom: 24 },
+>>     form: { display: "flex", gap: 8, marginBottom: 16 },
+>>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
+>>     addBtn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
+>>     list: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
+>>     item: { display: "flex", alignItems: "center", gap: 8, background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 10, padding: "10px 12px" },
+>>     text: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
+>>     delBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" }
+>>   };
+>>
+>>   return (
+>>     <div style={styles.page}>
+>>       <h1 style={styles.title}>Todo List</h1>
+>>
+>>       <form style={styles.form} onSubmit={handleSubmit}>
+>>         <input
+>>           ref={inputRef}
+>>           value={text}
+>>           onChange={e => setText(e.target.value)}
+>>           placeholder="Nueva tarea..."
+>>           maxLength={120}
+>>           style={styles.input}
+>>         />
+>>         <button type="submit" style={styles.addBtn} disabled={!text.trim()}>
+>>           Agregar
+>>         </button>
+>>       </form>
+>>
+>>       <ul style={styles.list}>
+>>         {todos.map(t => (
+>>           <li key={t.id} style={styles.item}>
+>>             <span
+>>               style={styles.text(t.done)}
+>>               onClick={() => toggleTodo(t.id)}
+>>               title="Marcar / desmarcar"
+>>             >
+>>               {t.text}
+>>             </span>
+>>             <button
+>>               onClick={() => deleteTodo(t.id)}
+>>               style={styles.delBtn}
+>>               title="Eliminar"
+>>             >
+>>               Eliminar
+>>             </button>
+>>           </li>
+>>         ))}
+>>       </ul>
+>>     </div>
+>>   );
+>> }
+>> '@ | Set-Content $APP
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 4) Volver a la raíz
+PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 5) Re-compilar y levantar (sirve API + frontend en http://localhost:4000)
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-BqmEA-Y7.js   225.15 kB │ gzip: 73.98 kB
+✓ built in 3.40s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
+PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir al frontend
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Reescribir App.jsx con CV interactivo (datos + competencias + potencial empleable)
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
+>> export default function App() {
+>>   const data = {
+>>     nombre: "Leandro Maciel",
+>>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
+>>     ubicacion: "Mercedes, Corrientes — Argentina",
+>>     email: "leandrotvr@gmail.com",
+>>     perfil: "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
+>>     proyectos: [
+>>       { t: "To Do List Fullstack", url: "https://mi-to-do-list.onrender.com/" },
+>>       { t: "Foro Fullstack", url: "https://foro-front.onrender.com/" },
+>>       { t: "Gestor de clientes / Facturación", url: "https://facturas-mvp.onrender.com/" }
+>>     ],
+>>     experiencia: [
+>>       {
+>>         puesto: "Profesor de Geografía y Ciencias Sociales",
+>>         org: "Ministerio de Educación de Corrientes",
+>>         periodo: "2015 — Actualidad",
+>>         desc: "Planificación e impartición de clases, contenidos digitales, gestión de grupos y comunicación con familias."
+>>       },
+>>       {
+>>         puesto: "Asistente Virtual (Freelance)",
+>>         org: "Proyectos independientes (Remoto)",
+>>         periodo: "2022 — Actualidad",
+>>         desc: "Gestión de correos y agendas, redacción/corrección, soporte al cliente, investigación en línea y reportes."
+>>       }
+>>     ],
+>>     competencias: [
+>>       "Comunicación clara", "Gestión del tiempo", "Atención al cliente",
+>>       "Redacción y edición", "Trabajo remoto", "Autonomía", "Trabajo en equipo",
+>>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom"
+>>     ],
+>>     formacion: [
+>>       "Profesor en Geografía y Ciencias Sociales — Instituto Alberti (2014)",
+>>       "Turismo — Universidad Siglo XXI (en curso)",
+>>       "Desarrollo Web (autodidacta)"
+>>     ],
+>>     idiomas: ["Español (Nativo)", "Inglés (Intermedio)", "Italiano (A1)"],
+>>     potencial: [
+>>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
+>>       "Customer Support (chat/email) con KPIs de satisfacción y tiempo de respuesta",
+>>       "Data Entry / Data Ops en hojas de cálculo y CRMs",
+>>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
+>>       "Soporte técnico básico (software y cuentas)",
+>>       "Docencia/tutorías online en Geografía y Ciencias Sociales",
+>>       "Redacción y estandarización de plantillas/procesos"
+>>     ]
+>>   };
+>>
+>>   const s = {
+>>     page: { padding: 28, maxWidth: 920, margin: "0 auto", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", color: "#eaeaea", background: "#121212", minHeight: "100vh" },
+>>     header: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 18 },
+>>     name: { fontSize: 40, fontWeight: 800 },
+>>     subtitle: { fontSize: 18, color: "#bdbdbd" },
+>>     meta: { color: "#c8c8c8" },
+>>     link: { color: "#7db7ff", textDecoration: "none" },
+>>     grid: { display: "grid", gridTemplateColumns: "1fr", gap: 18 },
+>>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
+>>     item: { marginBottom: 10 },
+>>     bullet: { margin: 0, paddingLeft: 18 }
+>>   };
+>>
+>>   return (
+>>     <div style={s.page}>
+>>       <header style={s.header}>
+>>         <div style={s.name}>{data.nombre}</div>
+>>         <div style={s.subtitle}>{data.titular}</div>
+>>         <div style={s.meta}>📍 {data.ubicacion} · ✉ <a href={`mailto:${data.email}`} style={s.link}>{data.email}</a></div>
+>>       </header>
+>>
+>>       <section style={s.grid}>
+>>         <div style={s.card}>
+>>           <h2 style={s.h2}>Perfil</h2>
+>>           <p>{data.perfil}</p>
+>>         </div>
+>>
+>>         <div style={s.card}>
+>>           <h2 style={s.h2}>Competencias</h2>
+>>           <ul style={s.bullet}>
+>>             {data.competencias.map((c, i) => <li key={i}>{c}</li>)}
+>>           </ul>
+>>         </div>
+>>
+>>         <div style={s.card}>
+>>           <h2 style={s.h2}>Potencial empleable</h2>
+>>           <ul style={s.bullet}>
+>>             {data.potencial.map((p, i) => <li key={i}>{p}</li>)}
+>>           </ul>
+>>         </div>
+>>
+>>         <div style={s.card}>
+>>           <h2 style={s.h2}>Experiencia</h2>
+>>           {data.experiencia.map((e, i) => (
+>>             <div key={i} style={s.item}>
+>>               <strong>{e.puesto}</strong> — {e.org} · <em>{e.periodo}</em><br />
+>>               <span>{e.desc}</span>
+>>             </div>
+>>           ))}
+>>         </div>
+>>
+>>         <div style={s.card}>
+>>           <h2 style={s.h2}>Proyectos Fullstack</h2>
+>>           <ul style={s.bullet}>
+>>             {data.proyectos.map((p, i) => (
+>>               <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
+>>             ))}
+>>           </ul>
+>>         </div>
+>>
+>>         <div style={s.card}>
+>>           <h2 style={s.h2}>Formación</h2>
+>>           <ul style={s.bullet}>
+>>             {data.formacion.map((f, i) => <li key={i}>{f}</li>)}
+>>           </ul>
+>>         </div>
+>>
+>>         <div style={s.card}>
+>>           <h2 style={s.h2}>Idiomas</h2>
+>>           <p>{data.idiomas.join(" · ")}</p>
+>>         </div>
+>>
+>>         <div style={{...s.card, textAlign: "center"}}>
+>>           <a style={{...s.link, fontWeight: 700}} href="mailto:leandrotvr@gmail.com?subject=Contacto%20por%20CV%20web">💼 Contactar</a>
+>>           <span style={{color:"#666"}}> · </span>
+>>           <a style={s.link} href="/CV-Leandro-Maciel.pdf" download>⬇ Descargar CV (PDF)</a>
+>>         </div>
+>>       </section>
+>>     </div>
+>>   );
+>> }
+>> '@ | Set-Content $APP
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Volver a la raíz
+PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Compilar y servir en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 29 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-BqTTiiq9.js   192.19 kB │ gzip: 60.84 kB
+✓ built in 3.06s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
+PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir al frontend
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Asegurar dependencias del client, por si falta axios
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install axios | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Reescribir App.jsx: TODO funcional + banner CV
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
+>> import { useState, useEffect, useRef } from "react";
+>> import axios from "axios";
+>>
+>> export default function App() {
+>>   // ====== DATOS CV (extraído de tu CV) ======
+>>   const cv = {
+>>     nombre: "Leandro Maciel",
+>>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
+>>     ubicacion: "Mercedes, Corrientes — Argentina",
+>>     email: "leandrotvr@gmail.com",
+>>     perfil:
+>>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
+>>     competencias: [
+>>       "Comunicación clara",
+>>       "Gestión del tiempo",
+>>       "Atención al cliente",
+>>       "Redacción y edición",
+>>       "Trabajo remoto",
+>>       "Autonomía",
+>>       "Trabajo en equipo",
+>>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
+>>     ],
+>>     potencial: [
+>>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
+>>       "Customer Support (chat/email) con KPIs de satisfacción",
+>>       "Data Entry / Data Ops en planillas y CRMs",
+>>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
+>>       "Soporte técnico básico (software y cuentas)",
+>>       "Docencia/tutorías online en Geografía y Cs. Sociales",
+>>       "Redacción y estandarización de plantillas/procesos",
+>>     ],
+>>     proyectos: [
+>>       { t: "To Do List Fullstack", url: "https://mi-to-do-list.onrender.com/" },
+>>       { t: "Foro Fullstack", url: "https://foro-front.onrender.com/" },
+>>       { t: "Gestor de clientes / Facturación", url: "https://facturas-mvp.onrender.com/" },
+>>     ],
+>>   };
+>>
+>>   // ====== TODO LIST (funcional como antes) ======
+>>   const [todos, setTodos] = useState([]);
+>>   const [text, setText] = useState("");
+>>   const inputRef = useRef(null);
+>>
+>>   useEffect(() => {
+>>     axios.get("/api/todos").then(res => setTodos(res.data));
+>>   }, []);
+>>
+>>   const addTodo = () => {
+>>     const v = text.trim();
+>>     if (!v) return;
+>>     axios.post("/api/todos", { text: v }).then(res => {
+>>       setTodos(prev => [...prev, res.data]);
+>>       setText("");
+>>       inputRef.current?.focus();
+>>     });
+>>   };
+>>
+>>   const toggleTodo = (id) => {
+>>     axios.put(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+>>     });
+>>   };
+>>
+>>   const deleteTodo = (id) => {
+>>     axios.delete(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.filter(t => t.id !== id));
+>>     });
+>>   };
+>>
+>>   const handleSubmit = (e) => {
+>>     e.preventDefault(); // Enter = Agregar
+>>     addTodo();
+>>   };
+>>
+>>   // ====== ESTILOS (oscuro minimalista) ======
+>>   const s = {
+>>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
+>>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
+>>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
+>>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
+>>     meta: { margin: 0, color: "#bdbdbd" },
+>>     link: { color: "#7db7ff", textDecoration: "none" },
+>>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
+>>     list: { margin: 0, paddingLeft: 18 },
+>>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>     row: { display: "flex", gap: 8, marginBottom: 10 },
+>>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
+>>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
+>>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
+>>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
+>>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
+>>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
+>>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
+>>     small: { color: "#aaa", fontSize: 14 }
+>>   };
+>>
+>>   return (
+>>     <div style={s.page}>
+>>       <div style={s.wrap}>
+>>         {/* ====== BANNER CV ====== */}
+>>         <section style={s.banner}>
+>>           <h1 style={s.name}>{cv.nombre}</h1>
+>>           <p style={s.sub}>{cv.titular}</p>
+>>           <p style={s.meta}>
+>>             📍 {cv.ubicacion} · ✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
+>>           </p>
+>>           <p style={{marginTop: 12}}>{cv.perfil}</p>
+>>
+>>           <div style={s.grid2}>
+>>             <div>
+>>               <h2 style={s.h2}>Competencias</h2>
+>>               <ul style={s.list}>
+>>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
+>>               </ul>
+>>             </div>
+>>             <div>
+>>               <h2 style={s.h2}>Potencial empleable</h2>
+>>               <ul style={s.list}>
+>>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
+>>               </ul>
+>>             </div>
+>>           </div>
+>>
+>>           <div style={{marginTop: 10}}>
+>>             <h2 style={s.h2}>Proyectos Fullstack</h2>
+>>             <ul style={s.list}>
+>>               {cv.proyectos.map((p, i) => (
+>>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
+>>               ))}
+>>             </ul>
+>>           </div>
+>>
+>>           <p style={s.small}>
+>>             ¿Te interesa? <a style={s.link} href={`mailto:${cv.email}?subject=Contacto%20por%20CV%20web`}>Contactar</a>
+>>             {/* Si copias tu PDF a client/public/CV-Leandro-Maciel.pdf el siguiente link permitirá descarga directa */}
+>>             {" · "}<a style={s.link} href="/CV-Leandro-Maciel.pdf" download>Descargar CV (PDF)</a>
+>>           </p>
+>>         </section>
+>>
+>>         {/* ====== TODO LIST ====== */}
+>>         <section style={s.card}>
+>>           <h2 style={s.h2}>Mis tareas</h2>
+>>
+>>           <form onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
+>>             <input
+>>               ref={inputRef}
+>>               value={text}
+>>               onChange={e => setText(e.target.value)}
+>>               placeholder="Nueva tarea..."
+>>               maxLength={120}
+>>               style={s.input}
+>>             />
+>>             <button type="submit" style={s.btn} disabled={!text.trim()}>
+>>               Agregar
+>>             </button>
+>>           </form>
+>>
+>>           <ul style={s.ul}>
+>>             {todos.map(t => (
+>>               <li key={t.id} style={s.li}>
+>>                 <span
+>>                   style={s.todoText(t.done)}
+>>                   onClick={() => toggleTodo(t.id)}
+>>                   title="Marcar / desmarcar"
+>>                 >
+>>                   {t.text}
+>>                 </span>
+>>                 <button onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
+>>                   Eliminar
+>>                 </button>
+>>               </li>
+>>             ))}
+>>           </ul>
+>>         </section>
+>>       </div>
+>>     </div>
+>>   );
+>> }
+>> '@ | Set-Content $APP
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 4) Volver a la raíz y compilar/servir
+PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-6uHZPjVn.js   228.37 kB │ gzip: 75.21 kB
+✓ built in 4.23s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
+PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir al frontend
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Asegurar dependencias del client, por si falta axios
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install axios | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Reescribir App.jsx: TODO funcional + banner CV
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
+>> import { useState, useEffect, useRef } from "react";
+>> import axios from "axios";
+>>
+>> export default function App() {
+>>   // ====== DATOS CV (extraído de tu CV) ======
+>>   const cv = {
+>>     nombre: "Leandro Maciel",
+>>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
+>>     ubicacion: "Mercedes, Corrientes — Argentina",
+>>     email: "leandrotvr@gmail.com",
+>>     perfil:
+>>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
+>>     competencias: [
+>>       "Comunicación clara",
+>>       "Gestión del tiempo",
+>>       "Atención al cliente",
+>>       "Redacción y edición",
+>>       "Trabajo remoto",
+>>       "Autonomía",
+>>       "Trabajo en equipo",
+>>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
+>>     ],
+>>     potencial: [
+>>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
+>>       "Customer Support (chat/email) con KPIs de satisfacción",
+>>       "Data Entry / Data Ops en planillas y CRMs",
+>>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
+>>       "Soporte técnico básico (software y cuentas)",
+>>       "Docencia/tutorías online en Geografía y Cs. Sociales",
+>>       "Redacción y estandarización de plantillas/procesos",
+>>     ],
+>>     proyectos: [
+>>       { t: "To Do List Fullstack", url: "https://mi-to-do-list.onrender.com/" },
+>>       { t: "Foro Fullstack", url: "https://foro-front.onrender.com/" },
+>>       { t: "Gestor de clientes / Facturación", url: "https://facturas-mvp.onrender.com/" },
+>>     ],
+>>   };
+>>
+>>   // ====== TODO LIST (funcional como antes) ======
+>>   const [todos, setTodos] = useState([]);
+>>   const [text, setText] = useState("");
+>>   const inputRef = useRef(null);
+>>
+>>   useEffect(() => {
+>>     axios.get("/api/todos").then(res => setTodos(res.data));
+>>   }, []);
+>>
+>>   const addTodo = () => {
+>>     const v = text.trim();
+>>     if (!v) return;
+>>     axios.post("/api/todos", { text: v }).then(res => {
+>>       setTodos(prev => [...prev, res.data]);
+>>       setText("");
+>>       inputRef.current?.focus();
+>>     });
+>>   };
+>>
+>>   const toggleTodo = (id) => {
+>>     axios.put(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+>>     });
+>>   };
+>>
+>>   const deleteTodo = (id) => {
+>>     axios.delete(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.filter(t => t.id !== id));
+>>     });
+>>   };
+>>
+>>   const handleSubmit = (e) => {
+>>     e.preventDefault(); // Enter = Agregar
+>>     addTodo();
+>>   };
+>>
+>>   // ====== ESTILOS (oscuro minimalista) ======
+>>   const s = {
+>>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
+>>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
+>>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
+>>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
+>>     meta: { margin: 0, color: "#bdbdbd" },
+>>     link: { color: "#7db7ff", textDecoration: "none" },
+>>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
+>>     list: { margin: 0, paddingLeft: 18 },
+>>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>     row: { display: "flex", gap: 8, marginBottom: 10 },
+>>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
+>>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
+>>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
+>>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
+>>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
+>>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
+>>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
+>>     small: { color: "#aaa", fontSize: 14 }
+>>   };
+>>
+>>   return (
+>>     <div style={s.page}>
+>>       <div style={s.wrap}>
+>>         {/* ====== BANNER CV ====== */}
+>>         <section style={s.banner}>
+>>           <h1 style={s.name}>{cv.nombre}</h1>
+>>           <p style={s.sub}>{cv.titular}</p>
+>>           <p style={s.meta}>
+>>             📍 {cv.ubicacion} · ✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
+>>           </p>
+>>           <p style={{marginTop: 12}}>{cv.perfil}</p>
+>>
+>>           <div style={s.grid2}>
+>>             <div>
+>>               <h2 style={s.h2}>Competencias</h2>
+>>               <ul style={s.list}>
+>>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
+>>               </ul>
+>>             </div>
+>>             <div>
+>>               <h2 style={s.h2}>Potencial empleable</h2>
+>>               <ul style={s.list}>
+>>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
+>>               </ul>
+>>             </div>
+>>           </div>
+>>
+>>           <div style={{marginTop: 10}}>
+>>             <h2 style={s.h2}>Proyectos Fullstack</h2>
+>>             <ul style={s.list}>
+>>               {cv.proyectos.map((p, i) => (
+>>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
+>>               ))}
+>>             </ul>
+>>           </div>
+>>
+>>           <p style={s.small}>
+>>             ¿Te interesa? <a style={s.link} href={`mailto:${cv.email}?subject=Contacto%20por%20CV%20web`}>Contactar</a>
+>>             {/* Si copias tu PDF a client/public/CV-Leandro-Maciel.pdf el siguiente link permitirá descarga directa */}
+>>             {" · "}<a style={s.link} href="/CV-Leandro-Maciel.pdf" download>Descargar CV (PDF)</a>
+>>           </p>
+>>         </section>
+>>
+>>         {/* ====== TODO LIST ====== */}
+>>         <section style={s.card}>
+>>           <h2 style={s.h2}>Mis tareas</h2>
+>>
+>>           <form onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
+>>             <input
+>>               ref={inputRef}
+>>               value={text}
+>>               onChange={e => setText(e.target.value)}
+>>               placeholder="Nueva tarea..."
+>>               maxLength={120}
+>>               style={s.input}
+>>             />
+>>             <button type="submit" style={s.btn} disabled={!text.trim()}>
+>>               Agregar
+>>             </button>
+>>           </form>
+>>
+>>           <ul style={s.ul}>
+>>             {todos.map(t => (
+>>               <li key={t.id} style={s.li}>
+>>                 <span
+>>                   style={s.todoText(t.done)}
+>>                   onClick={() => toggleTodo(t.id)}
+>>                   title="Marcar / desmarcar"
+>>                 >
+>>                   {t.text}
+>>                 </span>
+>>                 <button onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
+>>                   Eliminar
+>>                 </button>
+>>               </li>
+>>             ))}
+>>           </ul>
+>>         </section>
+>>       </div>
+>>     </div>
+>>   );
+>> }
+>> '@ | Set-Content $APP
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 4) Volver a la raíz y compilar/servir
+PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-6uHZPjVn.js   228.37 kB │ gzip: 75.21 kB
+✓ built in 4.08s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
+PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir al frontend
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Asegurar deps por si falta axios
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install axios | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Reescribir App.jsx: TODO primero + presentación + CV debajo
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
+>> import { useState, useEffect, useRef } from "react";
+>> import axios from "axios";
+>>
+>> export default function App() {
+>>   // ====== DATOS CV ======
+>>   const cv = {
+>>     nombre: "Leandro Maciel",
+>>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
+>>     ubicacion: "Mercedes, Corrientes — Argentina",
+>>     email: "leandrotvr@gmail.com",
+>>     perfil:
+>>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
+>>     competencias: [
+>>       "Comunicación clara",
+>>       "Gestión del tiempo",
+>>       "Atención al cliente",
+>>       "Redacción y edición",
+>>       "Trabajo remoto",
+>>       "Autonomía",
+>>       "Trabajo en equipo",
+>>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
+>>     ],
+>>     potencial: [
+>>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
+>>       "Customer Support (chat/email) con KPIs de satisfacción",
+>>       "Data Entry / Data Ops en planillas y CRMs",
+>>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
+>>       "Soporte técnico básico (software y cuentas)",
+>>       "Docencia/tutorías online en Geografía y Cs. Sociales",
+>>       "Redacción y estandarización de plantillas/procesos",
+>>     ],
+>>     proyectos: [
+>>       { t: "To Do List Fullstack", url: "https://mi-to-do-list.onrender.com/" },
+>>       { t: "Foro Fullstack", url: "https://foro-front.onrender.com/" },
+>>       { t: "Gestor de clientes / Facturación", url: "https://facturas-mvp.onrender.com/" },
+>>     ],
+>>   };
+>>
+>>   // ====== TODO LIST ======
+>>   const [todos, setTodos] = useState([]);
+>>   const [text, setText] = useState("");
+>>   const inputRef = useRef(null);
+>>
+>>   useEffect(() => {
+>>     axios.get("/api/todos").then(res => setTodos(res.data));
+>>   }, []);
+>>
+>>   const addTodo = () => {
+>>     const v = text.trim();
+>>     if (!v) return;
+>>     axios.post("/api/todos", { text: v }).then(res => {
+>>       setTodos(prev => [...prev, res.data]);
+>>       setText("");
+>>       inputRef.current?.focus();
+>>     });
+>>   };
+>>
+>>   const toggleTodo = (id) => {
+>>     axios.put(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+>>     });
+>>   };
+>>
+>>   const deleteTodo = (id) => {
+>>     axios.delete(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.filter(t => t.id !== id));
+>>     });
+>>   };
+>>
+>>   // ====== ESTILOS ======
+>>   const s = {
+>>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
+>>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
+>>
+>>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
+>>     small: { color: "#aaa", fontSize: 14 },
+>>
+>>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>
+>>     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
+>>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
+>>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
+>>
+>>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
+>>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
+>>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
+>>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
+>>
+>>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
+>>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
+>>     meta: { margin: 0, color: "#bdbdbd" },
+>>     link: { color: "#7db7ff", textDecoration: "none" },
+>>
+>>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
+>>     list: { margin: 0, paddingLeft: 18 }
+>>   };
+>>
+>>   return (
+>>     <div style={s.page}>
+>>       <div style={s.wrap}>
+>>         {/* ====== TODO LIST PRIMERO (con presentación arriba) ====== */}
+>>         <section style={s.card}>
+>>           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
+>>           <p style={s.small}>
+>>             <strong>Hecha con:</strong> React + Vite (frontend), Node.js + Express (backend), Axios, API REST (JSON), CORS ·
+>>             <strong> Competencias:</strong> CRUD, manejo de estado con Hooks (useState/useEffect/useRef), asincronía (promesas),
+>>             validaciones básicas, SPA y build de producción.
+>>           </p>
+>>
+>>           <form onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
+>>             <input
+>>               ref={inputRef}
+>>               value={text}
+>>               onChange={e => setText(e.target.value)}
+>>               placeholder="Nueva tarea..."
+>>               maxLength={120}
+>>               style={s.input}
+>>             />
+>>             <button type="submit" style={s.btn} disabled={!text.trim()}>
+>>               Agregar
+>>             </button>
+>>           </form>
+>>
+>>           <ul style={s.ul}>
+>>             {todos.map(t => (
+>>               <li key={t.id} style={s.li}>
+>>                 <span
+>>                   style={s.todoText(t.done)}
+>>                   onClick={() => toggleTodo(t.id)}
+>>                   title="Marcar / desmarcar"
+>>                 >
+>>                   {t.text}
+>>                 </span>
+>>                 <button onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
+>>                   Eliminar
+>>                 </button>
+>>               </li>
+>>             ))}
+>>           </ul>
+>>         </section>
+>>
+>>         {/* ====== BANNER CV DESPUÉS ====== */}
+>>         <section style={s.banner}>
+>>           <h1 style={s.name}>{cv.nombre}</h1>
+>>           <p style={s.sub}>{cv.titular}</p>
+>>           <p style={s.meta}>
+>>             📍 {cv.ubicacion} · ✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
+>>           </p>
+>>           <p style={{marginTop: 12}}>{cv.perfil}</p>
+>>
+>>           <div style={s.grid2}>
+>>             <div>
+>>               <h2 style={s.h2}>Competencias</h2>
+>>               <ul style={s.list}>
+>>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
+>>               </ul>
+>>             </div>
+>>             <div>
+>>               <h2 style={s.h2}>Potencial empleable</h2>
+>>               <ul style={s.list}>
+>>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
+>>               </ul>
+>>             </div>
+>>           </div>
+>>
+>>           <div style={{marginTop: 10}}>
+>>             <h2 style={s.h2}>Proyectos Fullstack</h2>
+>>             <ul style={s.list}>
+>>               {cv.proyectos.map((p, i) => (
+>>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
+>>               ))}
+>>             </ul>
+>>           </div>
+>>
+>>           <p style={s.small}>
+>>             ¿Te interesa? <a style={s.link} href={`mailto:${cv.email}?subject=Contacto%20por%20CV%20web`}>Contactar</a>
+>>             {" · "}<a style={s.link} href="/CV-Leandro-Maciel.pdf" download>Descargar CV (PDF)</a>
+>>           </p>
+>>         </section>
+>>       </div>
+>>     </div>
+>>   );
+>> }
+>> '@ | Set-Content $APP
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 4) Volver a la raíz y compilar/servir
+PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-CAcc_Geo.js   228.75 kB │ gzip: 75.39 kB
+✓ built in 3.83s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
+PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 0) Opcional: forzar consola a UTF-8 (solo para que veas bien acentos en mensajes)
+PS C:\Users\Leandro\Documents\todo-fullstack> chcp 65001 > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> $OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir al frontend
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Asegurar axios por si falta
+PS C:\Users\Leandro\Documents\todo-fullstack\client> npm install axios | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Reescribir App.jsx en UTF-8: TODO primero + presentación + CV + WhatsApp
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
+>> import { useState, useEffect, useRef } from "react";
+>> import axios from "axios";
+>>
+>> export default function App() {
+>>   // ====== CONFIG CONTACTO ======
+>>   // Reemplaza por tu número con formato: cod_pais + cod_area + numero (sin + ni 0 inicial).
+>>   // Ejemplo para Argentina (Corrientes): 549377XYYYYY
+>>   const whatsapp = "PON_TU_NUMERO_AQUI_EJ_549377123456";
+>>   const waHref = whatsapp ? `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web` : null;
+>>
+>>   // ====== DATOS CV ======
+>>   const cv = {
+>>     nombre: "Leandro Maciel",
+>>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
+>>     ubicacion: "Mercedes, Corrientes — Argentina",
+>>     email: "leandrotvr@gmail.com",
+>>     perfil:
+>>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
+>>     competencias: [
+>>       "Comunicación clara",
+>>       "Gestión del tiempo",
+>>       "Atención al cliente",
+>>       "Redacción y edición",
+>>       "Trabajo remoto",
+>>       "Autonomía",
+>>       "Trabajo en equipo",
+>>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
+>>     ],
+>>     potencial: [
+>>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
+>>       "Customer Support (chat/email) con KPIs de satisfacción",
+>>       "Data Entry / Data Ops en planillas y CRMs",
+>>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
+>>       "Soporte técnico básico (software y cuentas)",
+>>       "Docencia/tutorías online en Geografía y Cs. Sociales",
+>>       "Redacción y estandarización de plantillas/procesos",
+>>     ],
+>>     proyectos: [
+>>       { t: "To Do List Fullstack", url: "https://mi-to-do-list.onrender.com/" },
+>>       { t: "Foro Fullstack", url: "https://foro-front.onrender.com/" },
+>>       { t: "Gestor de clientes / Facturación", url: "https://facturas-mvp.onrender.com/" },
+>>     ],
+>>   };
+>>
+>>   // ====== TODO LIST ======
+>>   const [todos, setTodos] = useState([]);
+>>   const [text, setText] = useState("");
+>>   const inputRef = useRef(null);
+>>
+>>   useEffect(() => {
+>>     axios.get("/api/todos").then(res => setTodos(res.data));
+>>   }, []);
+>>
+>>   const addTodo = () => {
+>>     const v = text.trim();
+>>     if (!v) return;
+>>     axios.post("/api/todos", { text: v }).then(res => {
+>>       setTodos(prev => [...prev, res.data]);
+>>       setText("");
+>>       inputRef.current?.focus();
+>>     });
+>>   };
+>>
+>>   const toggleTodo = (id) => {
+>>     axios.put(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+>>     });
+>>   };
+>>
+>>   const deleteTodo = (id) => {
+>>     axios.delete(`/api/todos/${id}`).then(() => {
+>>       setTodos(prev => prev.filter(t => t.id !== id));
+>>     });
+>>   };
+>>
+>>   // ====== ESTILOS ======
+>>   const s = {
+>>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
+>>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
+>>
+>>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
+>>     small: { color: "#aaa", fontSize: 14 },
+>>
+>>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>
+>>     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
+>>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
+>>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
+>>
+>>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
+>>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
+>>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
+>>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
+>>
+>>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
+>>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
+>>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
+>>     meta: { margin: 0, color: "#bdbdbd" },
+>>     link: { color: "#7db7ff", textDecoration: "none" },
+>>
+>>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
+>>     list: { margin: 0, paddingLeft: 18 }
+>>   };
+>>
+>>   return (
+>>     <div style={s.page}>
+>>       <div style={s.wrap}>
+>>         {/* ====== TODO LIST PRIMERO (con presentación arriba) ====== */}
+>>         <section style={s.card}>
+>>           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
+>>           <p style={s.small}>
+>>             <strong>Hecha con:</strong> React + Vite (frontend), Node.js + Express (backend), Axios, API REST (JSON), CORS.{" "}
+>>             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
+>>           </p>
+>>
+>>           <form onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
+>>             <input
+>>               ref={inputRef}
+>>               value={text}
+>>               onChange={e => setText(e.target.value)}
+>>               placeholder="Nueva tarea..."
+>>               maxLength={120}
+>>               style={s.input}
+>>             />
+>>             <button type="submit" style={s.btn} disabled={!text.trim()}>
+>>               Agregar
+>>             </button>
+>>           </form>
+>>
+>>           <ul style={s.ul}>
+>>             {todos.map(t => (
+>>               <li key={t.id} style={s.li}>
+>>                 <span
+>>                   style={s.todoText(t.done)}
+>>                   onClick={() => toggleTodo(t.id)}
+>>                   title="Marcar / desmarcar"
+>>                 >
+>>                   {t.text}
+>>                 </span>
+>>                 <button onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
+>>                   Eliminar
+>>                 </button>
+>>               </li>
+>>             ))}
+>>           </ul>
+>>         </section>
+>>
+>>         {/* ====== BANNER CV DESPUÉS ====== */}
+>>         <section style={s.banner}>
+>>           <h1 style={s.name}>{cv.nombre}</h1>
+>>           <p style={s.sub}>{cv.titular}</p>
+>>           <p style={s.meta}>
+>>             📍 {cv.ubicacion}
+>>             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
+>>             {waHref ? <>{" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a></> : null}
+>>           </p>
+>>           <p style={{marginTop: 12}}>{cv.perfil}</p>
+>>
+>>           <div style={s.grid2}>
+>>             <div>
+>>               <h2 style={s.h2}>Competencias</h2>
+>>               <ul style={s.list}>
+>>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
+>>               </ul>
+>>             </div>
+>>             <div>
+>>               <h2 style={s.h2}>Potencial empleable</h2>
+>>               <ul style={s.list}>
+>>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
+>>               </ul>
+>>             </div>
+>>           </div>
+>>
+>>           <div style={{marginTop: 10}}>
+>>             <h2 style={s.h2}>Proyectos Fullstack</h2>
+>>             <ul style={s.list}>
+>>               {cv.proyectos.map((p, i) => (
+>>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
+>>               ))}
+>>             </ul>
+>>           </div>
+>>
+>>           <p style={s.small}>
+>>             ¿Te interesa? <a style={s.link} href={`mailto:${cv.email}?subject=Contacto%20por%20CV%20web`}>Contactar por email</a>
+>>             {" · "}<a style={s.link} href="/CV-Leandro-Maciel.pdf" download>Descargar CV (PDF)</a>
+>>           </p>
+>>         </section>
+>>       </div>
+>>     </div>
+>>   );
+>> }
+>> '@ | Set-Content -Encoding UTF8 $APP
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 4) Volver a la raíz y compilar/servir todo en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-Bzkga1Rh.js   228.92 kB │ gzip: 75.55 kB
+✓ built in 3.66s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # === Rutas ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Asegurar scripts y engines en package.json
+PS C:\Users\Leandro\Documents\todo-fullstack> $json = Get-Content package.json -Raw | ConvertFrom-Json
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['scripts']) { $json | Add-Member -NotePropertyName scripts -NotePropertyValue ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> # Scripts mínimos para Render
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force server 'node server.js') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force build  'cd client && npm install && npm run build') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force start  'npm run build && npm run server') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> # Node recomendado (Render soporta bien 18/20)
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['engines']) { $json | Add-Member engines ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.engines | Add-Member -Force node '>=18') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> $json | ConvertTo-Json -Depth 10 | Set-Content package.json
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) .gitignore básico
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> node_modules/
+>> client/node_modules/
+>> client/dist/
+>> .env
+>> .DS_Store
+>> '@ | Set-Content .gitignore
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) Build local para verificar (opcional)
+PS C:\Users\Leandro\Documents\todo-fullstack> npm install
+
+up to date, audited 95 packages in 2s
+
+21 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-Bzkga1Rh.js   228.92 kB │ gzip: 75.55 kB
+✓ built in 3.59s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # Cuando veas que funciona, cortá con Ctrl+C para seguir
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Inicializar git y primer push (elige A o B)
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # A) Si tenés GitHub CLI:
+PS C:\Users\Leandro\Documents\todo-fullstack> #   gh auth login
+PS C:\Users\Leandro\Documents\todo-fullstack> #   gh repo create todo-fullstack --public --source . --remote origin --push
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # B) Manual (creá repo vacío en GitHub y reemplazá URL abajo):
+PS C:\Users\Leandro\Documents\todo-fullstack> git init
+Initialized empty Git repository in C:/Users/Leandro/Documents/todo-fullstack/.git/
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/eslint.config.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/App.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/App.jsx.bak', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/index.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/main.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/vite.config.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'start-todo.ps1', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "Deploy: Express + React build"
+[master (root-commit) 53bcb46] Deploy: Express + React build
+ 19 files changed, 4819 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 client/.gitignore
+ create mode 100644 client/README.md
+ create mode 100644 client/eslint.config.js
+ create mode 100644 client/index.html
+ create mode 100644 client/package-lock.json
+ create mode 100644 client/package.json
+ create mode 100644 client/public/vite.svg
+ create mode 100644 client/src/App.css
+ create mode 100644 client/src/App.jsx
+ create mode 100644 client/src/App.jsx.bak
+ create mode 100644 client/src/assets/react.svg
+ create mode 100644 client/src/index.css
+ create mode 100644 client/src/main.jsx
+ create mode 100644 client/vite.config.js
+ create mode 100644 package-lock.json
+ create mode 100644 package.json
+ create mode 100644 server.js
+ create mode 100644 start-todo.ps1
+PS C:\Users\Leandro\Documents\todo-fullstack> git branch -M main
+PS C:\Users\Leandro\Documents\todo-fullstack> # Reemplaza <TU_URL_GITHUB> por la URL HTTPS del repo recién creado (ej: https://github.com/tuuser/todo-fullstack.git)
+PS C:\Users\Leandro\Documents\todo-fullstack> # git remote add origin <TU_URL_GITHUB>
+PS C:\Users\Leandro\Documents\todo-fullstack> # git push -u origin main
+PS C:\Users\Leandro\Documents\todo-fullstack> # === Rutas ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Asegurar scripts y engines en package.json
+PS C:\Users\Leandro\Documents\todo-fullstack> $json = Get-Content package.json -Raw | ConvertFrom-Json
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['scripts']) { $json | Add-Member -NotePropertyName scripts -NotePropertyValue ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> # Scripts mínimos para Render
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force server 'node server.js') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force build  'cd client && npm install && npm run build') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force start  'npm run build && npm run server') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> # Node recomendado (Render soporta bien 18/20)
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['engines']) { $json | Add-Member engines ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.engines | Add-Member -Force node '>=18') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> $json | ConvertTo-Json -Depth 10 | Set-Content package.json
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) .gitignore básico
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> node_modules/
+>> client/node_modules/
+>> client/dist/
+>> .env
+>> .DS_Store
+>> '@ | Set-Content .gitignore
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) Build local para verificar (opcional)
+PS C:\Users\Leandro\Documents\todo-fullstack> npm install
+
+up to date, audited 95 packages in 2s
+
+21 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run start
+
+> todo-fullstack@1.0.0 start
+> npm run build && npm run server
+
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 3s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
+dist/assets/index-Bzkga1Rh.js   228.92 kB │ gzip: 75.55 kB
+✓ built in 3.68s
+
+> todo-fullstack@1.0.0 server
+> node server.js
+
+Servidor  nico en http://localhost:4000
+PS C:\Users\Leandro\Documents\todo-fullstack> # Cuando veas que funciona, cortá con Ctrl+C para seguir
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Inicializar git y primer push (elige A o B)
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # A) Si tenés GitHub CLI:
+PS C:\Users\Leandro\Documents\todo-fullstack> #   gh auth login
+PS C:\Users\Leandro\Documents\todo-fullstack> #   gh repo create todo-fullstack --public --source . --remote origin --push
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # B) Manual (creá repo vacío en GitHub y reemplazá URL abajo):
+PS C:\Users\Leandro\Documents\todo-fullstack> git init
+Reinitialized existing Git repository in C:/Users/Leandro/Documents/todo-fullstack/.git/
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "Deploy: Express + React build"
+On branch main
+nothing to commit, working tree clean
+PS C:\Users\Leandro\Documents\todo-fullstack> git branch -M main
+PS C:\Users\Leandro\Documents\todo-fullstack> # Reemplaza <TU_URL_GITHUB> por la URL HTTPS del repo recién creado (ej: https://github.com/tuuser/todo-fullstack.git)
+PS C:\Users\Leandro\Documents\todo-fullstack> # git remote add origin <TU_URL_GITHUB>
+PS C:\Users\Leandro\Documents\todo-fullstack> # git push -u origin main
+PS C:\Users\Leandro\Documents\todo-fullstack> # Carpeta del proyecto
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location C:\Users\Leandro\Documents\todo-fullstack
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # Asegurar git y rama main
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not (Test-Path ".git")) { git init }
+PS C:\Users\Leandro\Documents\todo-fullstack> git branch -M main 2>$null
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # Ignorar cosas pesadas
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> node_modules/
+>> client/node_modules/
+>> client/dist/
+>> .env
+>> .DS_Store
+>> '@ | Set-Content .gitignore
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # Commit (si ya hay uno, no pasa nada)
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "deploy: express + react build (todo + CV)" 2>$null
+On branch main
+nothing to commit, working tree clean
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # Configurar remoto y hacer push
+PS C:\Users\Leandro\Documents\todo-fullstack> $repoUrl = "<TU_URL>"   # <-- pega aquí tu URL HTTPS de GitHub
+PS C:\Users\Leandro\Documents\todo-fullstack> $hasOrigin = (git remote 2>$null) -contains "origin"
+PS C:\Users\Leandro\Documents\todo-fullstack> if ($hasOrigin) { git remote set-url origin $repoUrl } else { git remote add origin $repoUrl }
+PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
+fatal: '<TU_URL>' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+PS C:\Users\Leandro\Documents\todo-fullstack> # 0) Ir al proyecto
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location C:\Users\Leandro\Documents\todo-fullstack
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) .gitignore seguro
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> node_modules/
+>> client/node_modules/
+>> client/dist/
+>> .env
+>> .DS_Store
+>> '@ | Set-Content .gitignore
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) Inicializar git (si hace falta) y setear rama
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not (Test-Path ".git")) { git init }
+PS C:\Users\Leandro\Documents\todo-fullstack> git branch -M main 2>$null
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) Agregar y commitear
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "deploy: express + react build (todo + CV)" 2>$null
+On branch main
+nothing to commit, working tree clean
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Configurar remoto y hacer push
+PS C:\Users\Leandro\Documents\todo-fullstack> $repoUrl = "https://github.com/Leandrotvr/todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $hasOrigin = (git remote 2>$null) -contains "origin"
+PS C:\Users\Leandro\Documents\todo-fullstack> if ($hasOrigin) { git remote set-url origin $repoUrl } else { git remote add origin $repoUrl }
+PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
+Enumerating objects: 25, done.
+Counting objects: 100% (25/25), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (23/23), done.
+Writing objects: 100% (25/25), 46.11 KiB | 1.65 MiB/s, done.
+Total 25 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To https://github.com/Leandrotvr/todo-fullstack
+ * [new branch]      main -> main
+branch 'main' set up to track 'origin/main'.
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 5) Verificación
+PS C:\Users\Leandro\Documents\todo-fullstack> git remote -v
+origin  https://github.com/Leandrotvr/todo-fullstack (fetch)
+origin  https://github.com/Leandrotvr/todo-fullstack (push)
+PS C:\Users\Leandro\Documents\todo-fullstack> git log --oneline -1
+53bcb46 (HEAD -> main, origin/main) Deploy: Express + React build
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 6) Abrir el repo en el navegador
+PS C:\Users\Leandro\Documents\todo-fullstack> Start-Process $repoUrl
+PS C:\Users\Leandro\Documents\todo-fullstack>
