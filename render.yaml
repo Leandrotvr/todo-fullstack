@@ -2,7 +2,6 @@ services:
   - type: web
     name: todo-fullstack
     env: node
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm run server
-    autoDeploy: true
-    plan: free
