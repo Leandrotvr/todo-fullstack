@@ -35,6 +35,8 @@ export default function App() {
   const [todos, setTodos] = useState([]);
   const [text, setText] = useState("");
   const [filtro, setFiltro] = useState("todas"); // todas | pendientes | hechas
+  const [editingId, setEditingId] = useState(null);
+  const [editingText, setEditingText] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -45,33 +47,66 @@ export default function App() {
     const v = text.trim();
     if (!v) return;
     axios.post("/api/todos", { text: v }).then(res => {
-      setTodos(prev => [...prev, res.data]);
+      setTodos(prev => [res.data, ...prev]);
       setText("");
       inputRef.current?.focus();
     });
   };
+
   const toggleTodo = (id) => {
+    if (editingId === id) return; // si está editando, no togglear
     axios.put(`/api/todos/${id}`).then(() => {
       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
     });
   };
+
+  const startEdit = (t) => {
+    setEditingId(t.id);
+    setEditingText(t.text);
+  };
+
+  const saveEdit = (id) => {
+    const v = editingText.trim();
+    if (!v) { cancelEdit(); return; }
+    axios.patch(`/api/todos/${id}`, { text: v }).then(res => {
+      const updated = res.data?.text ? res.data : { id, text: v, done: todos.find(x => x.id===id)?.done };
+      setTodos(prev => prev.map(t => t.id === id ? { ...t, text: updated.text } : t));
+      setEditingId(null);
+      setEditingText("");
+    });
+  };
+
+  const onEditKey = (e, id) => {
+    if (e.key === "Enter") { e.preventDefault(); saveEdit(id); }
+    if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText("");
+  };
+
   const deleteTodo = (id) => {
     axios.delete(`/api/todos/${id}`).then(() => {
       setTodos(prev => prev.filter(t => t.id !== id));
     });
   };
 
-  // Derivados para contador + filtrado
+  const clearCompleted = () => {
+    axios.delete("/api/todos/completed").then(() => {
+      setTodos(prev => prev.filter(t => !t.done));
+    });
+  };
+
+  // Derivados
   const total = todos.length;
   const hechas = todos.filter(t => t.done).length;
   const pendientes = total - hechas;
-  const filteredTodos = filtro === "hechas"
-    ? todos.filter(t => t.done)
-    : filtro === "pendientes"
-      ? todos.filter(t => !t.done)
-      : todos;
+  const filteredTodos = filtro === "hechas" ? todos.filter(t => t.done)
+                        : filtro === "pendientes" ? todos.filter(t => !t.done)
+                        : todos;
 
-  // ====== ESTILOS (UI; impresión se maneja con @media print en index.css) ======
+  // ====== ESTILOS ======
   const s = {
     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
@@ -112,7 +147,7 @@ export default function App() {
   return (
     <div style={s.page}>
       <div style={s.wrap}>
-        {/* ====== TODO LIST PRIMERO ====== */}
+        {/* ====== TODO LIST ====== */}
         <section className="pdf-card" style={s.card}>
           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
           <p style={s.small}>
@@ -120,17 +155,17 @@ export default function App() {
             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
           </p>
 
-          {/* Contador */}
           <p style={s.small}><strong>Contador:</strong> Total {total} · Pendientes {pendientes} · Hechas {hechas}</p>
 
-          {/* Filtros (ocultos en impresión) */}
           <div className="hide-print" style={s.filters}>
             <button type="button" style={s.tab(filtro === "todas")} onClick={() => setFiltro("todas")}>Todas</button>
             <button type="button" style={s.tab(filtro === "pendientes")} onClick={() => setFiltro("pendientes")}>Pendientes</button>
             <button type="button" style={s.tab(filtro === "hechas")} onClick={() => setFiltro("hechas")}>Hechas</button>
+            <div style={{flex:1}} />
+            <button type="button" className="hide-print" style={s.btn} onClick={clearCompleted} title="Borrar todas las completadas">Borrar completadas</button>
           </div>
 
-          {/* Formulario (oculto en impresión) */}
+          {/* Form nueva tarea (Enter para agregar) */}
           <form className="hide-print" onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
             <input
               ref={inputRef}
@@ -145,21 +180,33 @@ export default function App() {
             </button>
           </form>
 
-          {/* Lista filtrada */}
+          {/* Lista con edición inline */}
           <ul style={s.ul}>
             {filteredTodos.map(t => (
               <li key={t.id} style={s.li}>
-                <span
-                  className="pdf-task"
-                  style={s.todoText(t.done)}
-                  onClick={() => toggleTodo(t.id)}
-                  title="Marcar / desmarcar"
-                >
-                  {t.text}
-                </span>
-                <button className="hide-print" onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
-                  Eliminar
-                </button>
+                {editingId === t.id ? (
+                  <input
+                    autoFocus
+                    value={editingText}
+                    onChange={e => setEditingText(e.target.value)}
+                    onKeyDown={e => onEditKey(e, t.id)}
+                    onBlur={() => saveEdit(t.id)}
+                    style={{ ...s.input, flex: 1, background: "#2a2a2a" }}
+                    maxLength={120}
+                  />
+                ) : (
+                  <span
+                    className="pdf-task"
+                    style={s.todoText(t.done)}
+                    onDoubleClick={() => startEdit(t)}
+                    onClick={() => toggleTodo(t.id)}
+                    title="Doble clic para editar · Clic para completar"
+                  >
+                    {t.text}
+                  </span>
+                )}
+                <button className="hide-print" onClick={() => startEdit(t)} style={s.btn} title="Editar">Editar</button>
+                <button className="hide-print" onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">Eliminar</button>
               </li>
             ))}
           </ul>

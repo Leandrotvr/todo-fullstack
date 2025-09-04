@@ -38,11 +38,9 @@ let pool, db;
         done INTEGER NOT NULL DEFAULT 0
       );
     `);
-    console.log("DB: SQLite local lista en", localDbPath);
+    console.log("DB: SQLite local lista en", path.join(__dirname, "data", "todos.db"));
   }
-})().catch(err => {
-  console.error("Error inicializando DB:", err);
-});
+})().catch(err => console.error("Error inicializando DB:", err));
 
 // ===== API =====
 app.get("/api/todos", async (req, res) => {
@@ -50,11 +48,10 @@ app.get("/api/todos", async (req, res) => {
     if (usePg) {
       const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
       return res.json(rows);
-    } else {
-      const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
-        .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
-      return res.json(rows);
     }
+    const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
+      .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
+    return res.json(rows);
   } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
 });
 
@@ -63,43 +60,66 @@ app.post("/api/todos", async (req, res) => {
     const text = (req.body?.text || "").toString().trim();
     if (!text) return res.status(400).json({ error: "text requerido" });
     if (usePg) {
-      const { rows } = await pool.query(
-        "INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done",
-        [text]
-      );
+      const { rows } = await pool.query("INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done", [text]);
       return res.json(rows[0]);
-    } else {
-      const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
-      return res.json({ id: info.lastInsertRowid, text, done: false });
     }
+    const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
+    return res.json({ id: info.lastInsertRowid, text, done: false });
   } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
 });
 
+// Toggle (se mantiene la ruta existente)
 app.put("/api/todos/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (usePg) {
-      await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
-    } else {
-      db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
-    }
+    if (usePg) await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
+    else db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: "db_put", detail: e.message }); }
+  } catch (e) { res.status(500).json({ error: "db_put_toggle", detail: e.message }); }
 });
 
+// Editar texto (nuevo)
+app.patch("/api/todos/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const text = (req.body?.text || "").toString().trim();
+    if (!text) return res.status(400).json({ error: "text requerido" });
+    if (usePg) {
+      const { rows } = await pool.query(
+        "UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done",
+        [text, id]
+      );
+      if (!rows.length) return res.status(404).json({ error: "not_found" });
+      return res.json(rows[0]);
+    } else {
+      const r = db.prepare("UPDATE todos SET text = ? WHERE id = ?").run(text, id);
+      if (!r.changes) return res.status(404).json({ error: "not_found" });
+      const row = db.prepare("SELECT id, text, done FROM todos WHERE id = ?").get(id);
+      return res.json({ id: row.id, text: row.text, done: !!row.done });
+    }
+  } catch (e) { res.status(500).json({ error: "db_patch_text", detail: e.message }); }
+});
+
+// Borrar una
 app.delete("/api/todos/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (usePg) {
-      await pool.query("DELETE FROM todos WHERE id = $1", [id]);
-    } else {
-      db.prepare("DELETE FROM todos WHERE id = ?").run(id);
-    }
+    if (usePg) await pool.query("DELETE FROM todos WHERE id = $1", [id]);
+    else db.prepare("DELETE FROM todos WHERE id = ?").run(id);
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: "db_delete", detail: e.message }); }
+  } catch (e) { res.status(500).json({ error: "db_delete_one", detail: e.message }); }
 });
 
-// ===== FRONTEND build + fallback SPA (sin comodines) =====
+// Borrar todas las completadas (nuevo)
+app.delete("/api/todos/completed", async (req, res) => {
+  try {
+    if (usePg) await pool.query("DELETE FROM todos WHERE done = TRUE");
+    else db.prepare("DELETE FROM todos WHERE done = 1").run();
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: "db_delete_completed", detail: e.message }); }
+});
+
+// ===== FRONTEND build + fallback SPA =====
 const distPath = path.join(__dirname, "client", "dist");
 app.use(express.static(distPath));
 app.use((req, res, next) => {
