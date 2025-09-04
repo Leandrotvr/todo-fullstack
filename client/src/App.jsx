@@ -2,9 +2,11 @@
 import axios from "axios";
 
 export default function App() {
+  // ====== CONTACTO ======
   const whatsapp = "5493777416857";
   const waHref = `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web`;
 
+  // ====== DATOS CV ======
   const cv = {
     nombre: "Leandro Maciel",
     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
@@ -32,6 +34,7 @@ export default function App() {
   // ====== TODO LIST ======
   const [todos, setTodos] = useState([]);
   const [text, setText] = useState("");
+  const [filtro, setFiltro] = useState("todas"); // todas | pendientes | hechas
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -58,27 +61,52 @@ export default function App() {
     });
   };
 
-  // ====== ESTILOS (inline para UI; CSS @media print los sobreescribe) ======
+  // Derivados para contador + filtrado
+  const total = todos.length;
+  const hechas = todos.filter(t => t.done).length;
+  const pendientes = total - hechas;
+  const filteredTodos = filtro === "hechas"
+    ? todos.filter(t => t.done)
+    : filtro === "pendientes"
+      ? todos.filter(t => !t.done)
+      : todos;
+
+  // ====== ESTILOS (UI; impresión se maneja con @media print en index.css) ======
   const s = {
     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
+
     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
     small: { color: "#aaa", fontSize: 14 },
+
     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
+
     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
+
     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
     name: { fontSize: 28, fontWeight: 800, margin: 0 },
     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
     meta: { margin: 0, color: "#bdbdbd" },
     link: { color: "#7db7ff", textDecoration: "none" },
+
     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
-    list: { margin: 0, paddingLeft: 18 }
+    list: { margin: 0, paddingLeft: 18 },
+
+    filters: { display: "flex", gap: 8, alignItems: "center", marginTop: 4, marginBottom: 8 },
+    tab: (active) => ({
+      padding: "6px 10px",
+      borderRadius: 999,
+      border: "1px solid #444",
+      background: active ? "#fff" : "#2a2a2a",
+      color: active ? "#000" : "#eee",
+      cursor: "pointer"
+    })
   };
 
   return (
@@ -92,7 +120,17 @@ export default function App() {
             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
           </p>
 
-          {/* Ocultamos el formulario al imprimir */}
+          {/* Contador */}
+          <p style={s.small}><strong>Contador:</strong> Total {total} · Pendientes {pendientes} · Hechas {hechas}</p>
+
+          {/* Filtros (ocultos en impresión) */}
+          <div className="hide-print" style={s.filters}>
+            <button type="button" style={s.tab(filtro === "todas")} onClick={() => setFiltro("todas")}>Todas</button>
+            <button type="button" style={s.tab(filtro === "pendientes")} onClick={() => setFiltro("pendientes")}>Pendientes</button>
+            <button type="button" style={s.tab(filtro === "hechas")} onClick={() => setFiltro("hechas")}>Hechas</button>
+          </div>
+
+          {/* Formulario (oculto en impresión) */}
           <form className="hide-print" onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
             <input
               ref={inputRef}
@@ -107,8 +145,9 @@ export default function App() {
             </button>
           </form>
 
+          {/* Lista filtrada */}
           <ul style={s.ul}>
-            {todos.map(t => (
+            {filteredTodos.map(t => (
               <li key={t.id} style={s.li}>
                 <span
                   className="pdf-task"
@@ -118,7 +157,6 @@ export default function App() {
                 >
                   {t.text}
                 </span>
-                {/* Ocultamos controles de eliminar al imprimir */}
                 <button className="hide-print" onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
                   Eliminar
                 </button>
@@ -136,7 +174,6 @@ export default function App() {
             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
             {" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a>
             {" · "}
-            {/* Ocultamos el botón de imprimir en el propio PDF */}
             <button className="hide-print" onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
               Imprimir / Descargar PDF
             </button>
@@ -172,4 +209,3 @@ export default function App() {
     </div>
   );
 }
-

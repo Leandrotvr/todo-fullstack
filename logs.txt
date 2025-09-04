@@ -3,461 +3,150 @@ Copyright (C) Microsoft Corporation. Todos los derechos reservados.
 
 Instale la versión más reciente de PowerShell para obtener nuevas características y mejoras. https://aka.ms/PSWindows
 
-PS C:\Users\Leandro> # === RUTAS ===
-PS C:\Users\Leandro> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
-PS C:\Users\Leandro> $CLIENT = Join-Path $ROOT "client"
-PS C:\Users\Leandro> $APP    = Join-Path $CLIENT "src\App.jsx"
-PS C:\Users\Leandro>
-PS C:\Users\Leandro> # 1) Ir al frontend
-PS C:\Users\Leandro> Set-Location $CLIENT
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Reescribir App.jsx:
-PS C:\Users\Leandro\Documents\todo-fullstack\client> #    - Botón "Imprimir / Descargar PDF" -> window.print()
-PS C:\Users\Leandro\Documents\todo-fullstack\client> #    - Eliminar proyectos anteriores
-PS C:\Users\Leandro\Documents\todo-fullstack\client> #    - Agregar solo la To-Do actual con tu link público
-PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
->> import { useState, useEffect, useRef } from "react";
->> import axios from "axios";
->>
->> export default function App() {
->>   // ====== CONTACTO ======
->>   // WhatsApp en E.164 sin '+' ni ceros: ya configurado
->>   const whatsapp = "5493777416857";
->>   const waHref = `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web`;
->>
->>   // ====== DATOS CV ======
->>   const cv = {
->>     nombre: "Leandro Maciel",
->>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
->>     ubicacion: "Mercedes, Corrientes — Argentina",
->>     email: "leandrotvr@gmail.com",
->>     perfil:
->>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
->>     competencias: [
->>       "Comunicación clara",
->>       "Gestión del tiempo",
->>       "Atención al cliente",
->>       "Redacción y edición",
->>       "Trabajo remoto",
->>       "Autonomía",
->>       "Trabajo en equipo",
->>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
->>     ],
->>     potencial: [
->>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
->>       "Customer Support (chat/email)",
->>       "Data Entry / Data Ops en planillas y CRMs",
->>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
->>       "Soporte técnico básico (software y cuentas)",
->>       "Docencia/tutorías online (Geografía y Cs. Sociales)",
->>       "Redacción y estandarización de plantillas/procesos",
->>     ],
->>     // ⬇️ Solo tu To-Do actual en producción
->>     proyectos: [
->>       { t: "To-Do List (Live)", url: "https://todo-fullstack-30wd.onrender.com/" }
->>     ],
->>   };
->>
->>   // ====== TODO LIST ======
->>   const [todos, setTodos] = useState([]);
->>   const [text, setText] = useState("");
->>   const inputRef = useRef(null);
->>
->>   useEffect(() => {
->>     axios.get("/api/todos").then(res => setTodos(res.data));
->>   }, []);
->>
->>   const addTodo = () => {
->>     const v = text.trim();
->>     if (!v) return;
->>     axios.post("/api/todos", { text: v }).then(res => {
->>       setTodos(prev => [...prev, res.data]);
->>       setText("");
->>       inputRef.current?.focus();
->>     });
->>   };
->>
->>   const toggleTodo = (id) => {
->>     axios.put(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
->>     });
->>   };
->>
->>   const deleteTodo = (id) => {
->>     axios.delete(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.filter(t => t.id !== id));
->>     });
->>   };
->>
->>   // ====== ESTILOS ======
->>   const s = {
->>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
->>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
->>
->>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
->>     small: { color: "#aaa", fontSize: 14 },
->>
->>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>
->>     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
->>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
->>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
->>
->>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
->>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
->>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
->>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
->>
->>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
->>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
->>     meta: { margin: 0, color: "#bdbdbd" },
->>     link: { color: "#7db7ff", textDecoration: "none" },
->>
->>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
->>     list: { margin: 0, paddingLeft: 18 }
->>   };
->>
->>   return (
->>     <div style={s.page}>
->>       <div style={s.wrap}>
->>         {/* ====== TODO LIST PRIMERO ====== */}
->>         <section style={s.card}>
->>           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
->>           <p style={s.small}>
->>             <strong>Hecha con:</strong> React + Vite (frontend), Node.js + Express (backend), Axios, API REST (JSON), CORS.{" "}
->>             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
->>           </p>
->>
->>           <form onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
->>             <input
->>               ref={inputRef}
->>               value={text}
->>               onChange={e => setText(e.target.value)}
->>               placeholder="Nueva tarea..."
->>               maxLength={120}
->>               style={s.input}
->>             />
->>             <button type="submit" style={s.btn} disabled={!text.trim()}>
->>               Agregar
->>             </button>
->>           </form>
->>
->>           <ul style={s.ul}>
->>             {todos.map(t => (
->>               <li key={t.id} style={s.li}>
->>                 <span
->>                   style={s.todoText(t.done)}
->>                   onClick={() => toggleTodo(t.id)}
->>                   title="Marcar / desmarcar"
->>                 >
->>                   {t.text}
->>                 </span>
->>                 <button onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
->>                   Eliminar
->>                 </button>
->>               </li>
->>             ))}
->>           </ul>
->>         </section>
->>
->>         {/* ====== BANNER CV DESPUÉS ====== */}
->>         <section style={s.banner}>
->>           <h1 style={s.name}>{cv.nombre}</h1>
->>           <p style={s.sub}>{cv.titular}</p>
->>           <p style={s.meta}>
->>             📍 {cv.ubicacion}
->>             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
->>             {" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a>
->>             {" · "}
->>             <button onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
->>               Imprimir / Descargar PDF
->>             </button>
->>           </p>
->>
->>           <p style={{marginTop: 12}}>{cv.perfil}</p>
->>
->>           <div style={s.grid2}>
->>             <div>
->>               <h2 style={s.h2}>Competencias</h2>
->>               <ul style={s.list}>
->>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
->>               </ul>
->>             </div>
->>             <div>
->>               <h2 style={s.h2}>Potencial empleable</h2>
->>               <ul style={s.list}>
->>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
->>               </ul>
->>             </div>
->>           </div>
->>
->>           <div style={{marginTop: 10}}>
->>             <h2 style={s.h2}>Proyecto destacado</h2>
->>             <ul style={s.list}>
->>               {cv.proyectos.map((p, i) => (
->>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
->>               ))}
->>             </ul>
->>           </div>
->>         </section>
->>       </div>
->>     </div>
->>   );
->> }
->> '@ | Set-Content -Encoding UTF8 $APP
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Volver a la raíz, compilar y subir (Render autodeploy)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
-PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Dependencias de BD (pg para Postgres; better-sqlite3 para local/dev)
+PS C:\Users\Leandro\Documents\todo-fullstack> npm install pg better-sqlite3
 
-> todo-fullstack@1.0.0 build
-> cd client && npm install && npm run build
+up to date, audited 143 packages in 3s
 
-
-up to date, audited 176 packages in 2s
-
-39 packages are looking for funding
+29 packages are looking for funding
   run `npm fund` for details
 
 found 0 vulnerabilities
-
-> client@0.0.0 build
-> vite build
-
-vite v7.1.4 building for production...
-✓ 79 modules transformed.
-dist/index.html                   0.46 kB │ gzip:  0.29 kB
-dist/assets/index-Dtn62Xmo.css    0.91 kB │ gzip:  0.49 kB
-dist/assets/index-DBszSwKY.js   228.57 kB │ gzip: 75.42 kB
-✓ built in 3.61s
-PS C:\Users\Leandro\Documents\todo-fullstack> git add .
-warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'client/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
-PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "feat: imprimir/descargar PDF via window.print + limpiar proyectos y dejar To-Do live" 2>$null
-[main a8e5360] feat: imprimir/descargar PDF via window.print + limpiar proyectos y dejar To-Do live
- 1 file changed, 15 insertions(+), 18 deletions(-)
-PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
-Enumerating objects: 9, done.
-Counting objects: 100% (9/9), done.
-Delta compression using up to 2 threads
-Compressing objects: 100% (5/5), done.
-Writing objects: 100% (5/5), 877 bytes | 438.00 KiB/s, done.
-Total 5 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
-To https://github.com/Leandrotvr/todo-fullstack
-   4f09dbf..a8e5360  main -> main
-branch 'main' set up to track 'origin/main'.
-PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
-PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
-PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
-PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
-PS C:\Users\Leandro\Documents\todo-fullstack> $CSS    = Join-Path $CLIENT "src\index.css"
 PS C:\Users\Leandro\Documents\todo-fullstack>
-PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir al frontend
-PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Asegurar CSS base e inyectar reglas de impresión (al final del archivo)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> if (-not (Test-Path $CSS)) { New-Item -ItemType File -Path $CSS | Out-Null }
-PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
->> /* === PRINT STYLES === */
->> @media print {
->>   @page { margin: 12mm; }
->>   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
->>   html, body { background: #fff !important; color: #000 !important; }
->>   a { color: #000 !important; text-decoration: none; }
->>   .hide-print { display: none !important; }
->>   /* Quitar bordes/colores oscuros de tarjetas para PDF limpio */
->>   .pdf-card {
->>     background: #fff !important;
->>     border: 1px solid #ddd !important;
->>     color: #000 !important;
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) server.js: usa Postgres si hay DATABASE_URL; si no, SQLite. Fallback SPA compatible Express 5.
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> const express = require("express");
+>> const cors = require("cors");
+>> const path = require("path");
+>>
+>> const app = express();
+>> app.use(cors());
+>> app.use(express.json());
+>>
+>> // ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
+>> const usePg = !!process.env.DATABASE_URL;
+>> let pool, db;
+>>
+>> (async () => {
+>>   if (usePg) {
+>>     const { Pool } = require("pg");
+>>     pool = new Pool({
+>>       connectionString: process.env.DATABASE_URL,
+>>       ssl: { rejectUnauthorized: false },
+>>     });
+>>     await pool.query(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   SERIAL PRIMARY KEY,
+>>         text TEXT    NOT NULL,
+>>         done BOOLEAN NOT NULL DEFAULT false
+>>       );
+>>     `);
+>>     console.log("DB: Postgres listo.");
+>>   } else {
+>>     const fs = require("fs");
+>>     const Database = require("better-sqlite3");
+>>     const localDbPath = path.join(__dirname, "data", "todos.db");
+>>     fs.mkdirSync(path.dirname(localDbPath), { recursive: true });
+>>     db = new Database(localDbPath);
+>>     db.exec(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   INTEGER PRIMARY KEY AUTOINCREMENT,
+>>         text TEXT    NOT NULL,
+>>         done INTEGER NOT NULL DEFAULT 0
+>>       );
+>>     `);
+>>     console.log("DB: SQLite local lista en", localDbPath);
 >>   }
->>   /* Texto de tareas más legible en PDF */
->>   .pdf-task { color: #000 !important; }
->> }
->> '@ | Add-Content $CSS
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Reescribir App.jsx con clases para impresión (ocultamos controles con .hide-print y aclaramos tarjetas con .pdf-card)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
->> import { useState, useEffect, useRef } from "react";
->> import axios from "axios";
+>> })().catch(err => {
+>>   console.error("Error inicializando DB:", err);
+>> });
 >>
->> export default function App() {
->>   const whatsapp = "5493777416857";
->>   const waHref = `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web`;
+>> // ===== API =====
+>> app.get("/api/todos", async (req, res) => {
+>>   try {
+>>     if (usePg) {
+>>       const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
+>>       return res.json(rows);
+>>     } else {
+>>       const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
+>>         .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
+>>       return res.json(rows);
+>>     }
+>>   } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
+>> });
 >>
->>   const cv = {
->>     nombre: "Leandro Maciel",
->>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
->>     ubicacion: "Mercedes, Corrientes — Argentina",
->>     email: "leandrotvr@gmail.com",
->>     perfil:
->>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
->>     competencias: [
->>       "Comunicación clara","Gestión del tiempo","Atención al cliente",
->>       "Redacción y edición","Trabajo remoto","Autonomía","Trabajo en equipo",
->>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
->>     ],
->>     potencial: [
->>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
->>       "Customer Support (chat/email)",
->>       "Data Entry / Data Ops en planillas y CRMs",
->>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
->>       "Soporte técnico básico (software y cuentas)",
->>       "Docencia/tutorías online (Geografía y Cs. Sociales)",
->>       "Redacción y estandarización de plantillas/procesos",
->>     ],
->>     proyectos: [{ t: "To-Do List (Live)", url: "https://todo-fullstack-30wd.onrender.com/" }],
->>   };
+>> app.post("/api/todos", async (req, res) => {
+>>   try {
+>>     const text = (req.body?.text || "").toString().trim();
+>>     if (!text) return res.status(400).json({ error: "text requerido" });
+>>     if (usePg) {
+>>       const { rows } = await pool.query(
+>>         "INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done",
+>>         [text]
+>>       );
+>>       return res.json(rows[0]);
+>>     } else {
+>>       const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
+>>       return res.json({ id: info.lastInsertRowid, text, done: false });
+>>     }
+>>   } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
+>> });
 >>
->>   // ====== TODO LIST ======
->>   const [todos, setTodos] = useState([]);
->>   const [text, setText] = useState("");
->>   const inputRef = useRef(null);
+>> app.put("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) {
+>>       await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
+>>     } else {
+>>       db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
+>>     }
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_put", detail: e.message }); }
+>> });
 >>
->>   useEffect(() => {
->>     axios.get("/api/todos").then(res => setTodos(res.data));
->>   }, []);
+>> app.delete("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) {
+>>       await pool.query("DELETE FROM todos WHERE id = $1", [id]);
+>>     } else {
+>>       db.prepare("DELETE FROM todos WHERE id = ?").run(id);
+>>     }
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_delete", detail: e.message }); }
+>> });
 >>
->>   const addTodo = () => {
->>     const v = text.trim();
->>     if (!v) return;
->>     axios.post("/api/todos", { text: v }).then(res => {
->>       setTodos(prev => [...prev, res.data]);
->>       setText("");
->>       inputRef.current?.focus();
->>     });
->>   };
->>   const toggleTodo = (id) => {
->>     axios.put(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
->>     });
->>   };
->>   const deleteTodo = (id) => {
->>     axios.delete(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.filter(t => t.id !== id));
->>     });
->>   };
+>> // ===== FRONTEND build + fallback SPA (sin comodines) =====
+>> const distPath = path.join(__dirname, "client", "dist");
+>> app.use(express.static(distPath));
+>> app.use((req, res, next) => {
+>>   if (req.method === "GET" && !req.path.startsWith("/api")) {
+>>     return res.sendFile(path.join(distPath, "index.html"));
+>>   }
+>>   next();
+>> });
 >>
->>   // ====== ESTILOS (inline para UI; CSS @media print los sobreescribe) ======
->>   const s = {
->>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
->>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
->>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
->>     small: { color: "#aaa", fontSize: 14 },
->>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
->>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
->>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
->>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
->>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
->>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
->>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
->>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
->>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
->>     meta: { margin: 0, color: "#bdbdbd" },
->>     link: { color: "#7db7ff", textDecoration: "none" },
->>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
->>     list: { margin: 0, paddingLeft: 18 }
->>   };
->>
->>   return (
->>     <div style={s.page}>
->>       <div style={s.wrap}>
->>         {/* ====== TODO LIST PRIMERO ====== */}
->>         <section className="pdf-card" style={s.card}>
->>           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
->>           <p style={s.small}>
->>             <strong>Hecha con:</strong> React + Vite (frontend), Node.js + Express (backend), Axios, API REST (JSON), CORS.{" "}
->>             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
->>           </p>
->>
->>           {/* Ocultamos el formulario al imprimir */}
->>           <form className="hide-print" onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
->>             <input
->>               ref={inputRef}
->>               value={text}
->>               onChange={e => setText(e.target.value)}
->>               placeholder="Nueva tarea..."
->>               maxLength={120}
->>               style={s.input}
->>             />
->>             <button type="submit" style={s.btn} disabled={!text.trim()}>
->>               Agregar
->>             </button>
->>           </form>
->>
->>           <ul style={s.ul}>
->>             {todos.map(t => (
->>               <li key={t.id} style={s.li}>
->>                 <span
->>                   className="pdf-task"
->>                   style={s.todoText(t.done)}
->>                   onClick={() => toggleTodo(t.id)}
->>                   title="Marcar / desmarcar"
->>                 >
->>                   {t.text}
->>                 </span>
->>                 {/* Ocultamos controles de eliminar al imprimir */}
->>                 <button className="hide-print" onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
->>                   Eliminar
->>                 </button>
->>               </li>
->>             ))}
->>           </ul>
->>         </section>
->>
->>         {/* ====== BANNER CV ====== */}
->>         <section className="pdf-card" style={s.banner}>
->>           <h1 style={s.name}>{cv.nombre}</h1>
->>           <p style={s.sub}>{cv.titular}</p>
->>           <p style={s.meta}>
->>             📍 {cv.ubicacion}
->>             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
->>             {" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a>
->>             {" · "}
->>             {/* Ocultamos el botón de imprimir en el propio PDF */}
->>             <button className="hide-print" onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
->>               Imprimir / Descargar PDF
->>             </button>
->>           </p>
->>
->>           <p style={{marginTop: 12}}>{cv.perfil}</p>
->>
->>           <div style={s.grid2}>
->>             <div>
->>               <h2 style={s.h2}>Competencias</h2>
->>               <ul style={s.list}>
->>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
->>               </ul>
->>             </div>
->>             <div>
->>               <h2 style={s.h2}>Potencial empleable</h2>
->>               <ul style={s.list}>
->>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
->>               </ul>
->>             </div>
->>           </div>
->>
->>           <div style={{marginTop: 10}}>
->>             <h2 style={s.h2}>Proyecto destacado</h2>
->>             <ul style={s.list}>
->>               {cv.proyectos.map((p, i) => (
->>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
->>               ))}
->>             </ul>
->>           </div>
->>         </section>
->>       </div>
->>     </div>
->>   );
->> }
->> '@ | Set-Content -Encoding UTF8 $APP
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 4) Volver a la raíz, compilar y push (Render autodeploy)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+>> const PORT = process.env.PORT || 4000;
+>> app.listen(PORT, () =>
+>>   console.log(`Servidor único en http://localhost:${PORT} (DB: ${usePg ? "Postgres" : "SQLite"})`)
+>> );
+>> '@ | Set-Content -Encoding UTF8 .\server.js
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) (por si acaso) asegurar scripts/engine en package.json
+PS C:\Users\Leandro\Documents\todo-fullstack> $json = Get-Content package.json -Raw | ConvertFrom-Json
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['scripts']) { $json | Add-Member scripts ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force server 'node server.js') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force build  'cd client && npm install && npm run build') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force start  'npm run build && npm run server') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['engines']) { $json | Add-Member engines ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.engines | Add-Member -Force node '>=18') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> $json | ConvertTo-Json -Depth 10 | Set-Content package.json
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Compilar y push (Render autodeploy)
 PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
 
 > todo-fullstack@1.0.0 build
@@ -478,48 +167,176 @@ vite v7.1.4 building for production...
 ✓ 79 modules transformed.
 dist/index.html                   0.46 kB │ gzip:  0.29 kB
 dist/assets/index-CV6lvuN4.css    1.26 kB │ gzip:  0.60 kB
-dist/assets/index-DFazao5K.js   228.71 kB │ gzip: 75.45 kB
-✓ built in 3.83s
+dist/assets/index-CQCB8xtB.js   228.71 kB │ gzip: 75.45 kB
+✓ built in 7.07s
 PS C:\Users\Leandro\Documents\todo-fullstack> git add .
 warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'client/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'client/src/index.css', LF will be replaced by CRLF the next time Git touches it
-PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "chore: print-friendly PDF (ocultar controles) + estilos de impresión" 2>$null
-[main b98b11b] chore: print-friendly PDF (ocultar controles) + estilos de impresión
- 2 files changed, 30 insertions(+), 29 deletions(-)
+warning: in the working copy of 'server.js', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "feat: persistencia DB dual (Postgres via DATABASE_URL o SQLite local)" 2>$null
+[main df46d33] feat: persistencia DB dual (Postgres via DATABASE_URL o SQLite local)
+ 2 files changed, 196 insertions(+), 1288 deletions(-)
 PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
-Enumerating objects: 11, done.
-Counting objects: 100% (11/11), done.
+Enumerating objects: 7, done.
+Counting objects: 100% (7/7), done.
 Delta compression using up to 2 threads
-Compressing objects: 100% (6/6), done.
-Writing objects: 100% (6/6), 1.16 KiB | 297.00 KiB/s, done.
-Total 6 (delta 5), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (5/5), completed with 5 local objects.
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 2.96 KiB | 758.00 KiB/s, done.
+Total 4 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
 To https://github.com/Leandrotvr/todo-fullstack
-   a8e5360..b98b11b  main -> main
+   b516d12..df46d33  main -> main
 branch 'main' set up to track 'origin/main'.
 PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
-PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
-PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
-PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $ROOT
 PS C:\Users\Leandro\Documents\todo-fullstack>
-PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir al frontend
-PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Reemplazar el título en App.jsx (todas las apariciones)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> $code = Get-Content $APP -Raw
-PS C:\Users\Leandro\Documents\todo-fullstack\client> $code = $code -replace 'Proyecto destacado', 'Proyecto fullstack'
-PS C:\Users\Leandro\Documents\todo-fullstack\client> $code | Set-Content -Encoding UTF8 $APP
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Volver a la raíz, compilar y push (Render autodeploy)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Dependencias de BD (pg para Postgres; better-sqlite3 para local/dev)
+PS C:\Users\Leandro\Documents\todo-fullstack> npm install pg better-sqlite3
+
+up to date, audited 143 packages in 5s
+
+29 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) server.js: usa Postgres si hay DATABASE_URL; si no, SQLite. Fallback SPA compatible Express 5.
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> const express = require("express");
+>> const cors = require("cors");
+>> const path = require("path");
+>>
+>> const app = express();
+>> app.use(cors());
+>> app.use(express.json());
+>>
+>> // ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
+>> const usePg = !!process.env.DATABASE_URL;
+>> let pool, db;
+>>
+>> (async () => {
+>>   if (usePg) {
+>>     const { Pool } = require("pg");
+>>     pool = new Pool({
+>>       connectionString: process.env.DATABASE_URL,
+>>       ssl: { rejectUnauthorized: false },
+>>     });
+>>     await pool.query(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   SERIAL PRIMARY KEY,
+>>         text TEXT    NOT NULL,
+>>         done BOOLEAN NOT NULL DEFAULT false
+>>       );
+>>     `);
+>>     console.log("DB: Postgres listo.");
+>>   } else {
+>>     const fs = require("fs");
+>>     const Database = require("better-sqlite3");
+>>     const localDbPath = path.join(__dirname, "data", "todos.db");
+>>     fs.mkdirSync(path.dirname(localDbPath), { recursive: true });
+>>     db = new Database(localDbPath);
+>>     db.exec(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   INTEGER PRIMARY KEY AUTOINCREMENT,
+>>         text TEXT    NOT NULL,
+>>         done INTEGER NOT NULL DEFAULT 0
+>>       );
+>>     `);
+>>     console.log("DB: SQLite local lista en", localDbPath);
+>>   }
+>> })().catch(err => {
+>>   console.error("Error inicializando DB:", err);
+>> });
+>>
+>> // ===== API =====
+>> app.get("/api/todos", async (req, res) => {
+>>   try {
+>>     if (usePg) {
+>>       const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
+>>       return res.json(rows);
+>>     } else {
+>>       const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
+>>         .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
+>>       return res.json(rows);
+>>     }
+>>   } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
+>> });
+>>
+>> app.post("/api/todos", async (req, res) => {
+>>   try {
+>>     const text = (req.body?.text || "").toString().trim();
+>>     if (!text) return res.status(400).json({ error: "text requerido" });
+>>     if (usePg) {
+>>       const { rows } = await pool.query(
+>>         "INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done",
+>>         [text]
+>>       );
+>>       return res.json(rows[0]);
+>>     } else {
+>>       const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
+>>       return res.json({ id: info.lastInsertRowid, text, done: false });
+>>     }
+>>   } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
+>> });
+>>
+>> app.put("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) {
+>>       await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
+>>     } else {
+>>       db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
+>>     }
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_put", detail: e.message }); }
+>> });
+>>
+>> app.delete("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) {
+>>       await pool.query("DELETE FROM todos WHERE id = $1", [id]);
+>>     } else {
+>>       db.prepare("DELETE FROM todos WHERE id = ?").run(id);
+>>     }
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_delete", detail: e.message }); }
+>> });
+>>
+>> // ===== FRONTEND build + fallback SPA (sin comodines) =====
+>> const distPath = path.join(__dirname, "client", "dist");
+>> app.use(express.static(distPath));
+>> app.use((req, res, next) => {
+>>   if (req.method === "GET" && !req.path.startsWith("/api")) {
+>>     return res.sendFile(path.join(distPath, "index.html"));
+>>   }
+>>   next();
+>> });
+>>
+>> const PORT = process.env.PORT || 4000;
+>> app.listen(PORT, () =>
+>>   console.log(`Servidor único en http://localhost:${PORT} (DB: ${usePg ? "Postgres" : "SQLite"})`)
+>> );
+>> '@ | Set-Content -Encoding UTF8 .\server.js
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) (por si acaso) asegurar scripts/engine en package.json
+PS C:\Users\Leandro\Documents\todo-fullstack> $json = Get-Content package.json -Raw | ConvertFrom-Json
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['scripts']) { $json | Add-Member scripts ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force server 'node server.js') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force build  'cd client && npm install && npm run build') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.scripts | Add-Member -Force start  'npm run build && npm run server') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> if (-not $json.PSObject.Properties['engines']) { $json | Add-Member engines ([pscustomobject]@{}) }
+PS C:\Users\Leandro\Documents\todo-fullstack> ($json.engines | Add-Member -Force node '>=18') > $null
+PS C:\Users\Leandro\Documents\todo-fullstack> $json | ConvertTo-Json -Depth 10 | Set-Content package.json
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Compilar y push (Render autodeploy)
 PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
 
 > todo-fullstack@1.0.0 build
 > cd client && npm install && npm run build
 
 
-up to date, audited 176 packages in 6s
+up to date, audited 176 packages in 2s
 
 39 packages are looking for funding
   run `npm fund` for details
@@ -534,22 +351,16 @@ vite v7.1.4 building for production...
 dist/index.html                   0.46 kB │ gzip:  0.29 kB
 dist/assets/index-CV6lvuN4.css    1.26 kB │ gzip:  0.60 kB
 dist/assets/index-CQCB8xtB.js   228.71 kB │ gzip: 75.45 kB
-✓ built in 6.40s
+✓ built in 3.85s
 PS C:\Users\Leandro\Documents\todo-fullstack> git add .
 warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'client/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
-PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "chore: renombrar sección → Proyecto fullstack" 2>$null
-[main b516d12] chore: renombrar sección → Proyecto fullstack
- 1 file changed, 2 insertions(+), 1 deletion(-)
+warning: in the working copy of 'server.js', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "feat: persistencia DB dual (Postgres via DATABASE_URL o SQLite local)" 2>$null
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
 PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
-Enumerating objects: 9, done.
-Counting objects: 100% (9/9), done.
-Delta compression using up to 2 threads
-Compressing objects: 100% (5/5), done.
-Writing objects: 100% (5/5), 462 bytes | 154.00 KiB/s, done.
-Total 5 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
-To https://github.com/Leandrotvr/todo-fullstack
-   b98b11b..b516d12  main -> main
 branch 'main' set up to track 'origin/main'.
+Everything up-to-date
 PS C:\Users\Leandro\Documents\todo-fullstack>
