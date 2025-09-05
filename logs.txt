@@ -1,722 +1,206 @@
-Windows PowerShell
-Copyright (C) Microsoft Corporation. Todos los derechos reservados.
+# === RUTAS ===
+$ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+$SERVER = Join-Path $ROOT "server.js"
+$RENDER = Join-Path $ROOT "render.yaml"
 
-Instale la versión más reciente de PowerShell para obtener nuevas características y mejoras. https://aka.ms/PSWindows
+# 1) Ir a raíz e instalar middlewares de prod
+Set-Location $ROOT
+npm install compression helmet express-rate-limit
 
-PS C:\Users\Leandro> # === RUTAS ===
-PS C:\Users\Leandro> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
-PS C:\Users\Leandro> $CLIENT = Join-Path $ROOT "client"
-PS C:\Users\Leandro> $APP    = Join-Path $CLIENT "src\App.jsx"
-PS C:\Users\Leandro>
-PS C:\Users\Leandro> # 1) Ir al frontend
-PS C:\Users\Leandro> Set-Location $CLIENT
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Reescribir App.jsx con filtros + contador (mantiene impresión a PDF y CV)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
->> import { useState, useEffect, useRef } from "react";
->> import axios from "axios";
->>
->> export default function App() {
->>   // ====== CONTACTO ======
->>   const whatsapp = "5493777416857";
->>   const waHref = `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web`;
->>
->>   // ====== DATOS CV ======
->>   const cv = {
->>     nombre: "Leandro Maciel",
->>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
->>     ubicacion: "Mercedes, Corrientes — Argentina",
->>     email: "leandrotvr@gmail.com",
->>     perfil:
->>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
->>     competencias: [
->>       "Comunicación clara","Gestión del tiempo","Atención al cliente",
->>       "Redacción y edición","Trabajo remoto","Autonomía","Trabajo en equipo",
->>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
->>     ],
->>     potencial: [
->>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
->>       "Customer Support (chat/email)",
->>       "Data Entry / Data Ops en planillas y CRMs",
->>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
->>       "Soporte técnico básico (software y cuentas)",
->>       "Docencia/tutorías online (Geografía y Cs. Sociales)",
->>       "Redacción y estandarización de plantillas/procesos",
->>     ],
->>     proyectos: [{ t: "To-Do List (Live)", url: "https://todo-fullstack-30wd.onrender.com/" }],
->>   };
->>
->>   // ====== TODO LIST ======
->>   const [todos, setTodos] = useState([]);
->>   const [text, setText] = useState("");
->>   const [filtro, setFiltro] = useState("todas"); // todas | pendientes | hechas
->>   const inputRef = useRef(null);
->>
->>   useEffect(() => {
->>     axios.get("/api/todos").then(res => setTodos(res.data));
->>   }, []);
->>
->>   const addTodo = () => {
->>     const v = text.trim();
->>     if (!v) return;
->>     axios.post("/api/todos", { text: v }).then(res => {
->>       setTodos(prev => [...prev, res.data]);
->>       setText("");
->>       inputRef.current?.focus();
->>     });
->>   };
->>   const toggleTodo = (id) => {
->>     axios.put(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
->>     });
->>   };
->>   const deleteTodo = (id) => {
->>     axios.delete(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.filter(t => t.id !== id));
->>     });
->>   };
->>
->>   // Derivados para contador + filtrado
->>   const total = todos.length;
->>   const hechas = todos.filter(t => t.done).length;
->>   const pendientes = total - hechas;
->>   const filteredTodos = filtro === "hechas"
->>     ? todos.filter(t => t.done)
->>     : filtro === "pendientes"
->>       ? todos.filter(t => !t.done)
->>       : todos;
->>
->>   // ====== ESTILOS (UI; impresión se maneja con @media print en index.css) ======
->>   const s = {
->>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
->>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
->>
->>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
->>     small: { color: "#aaa", fontSize: 14 },
->>
->>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
->>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
->>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
->>
->>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
->>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
->>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
->>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
->>
->>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
->>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
->>     meta: { margin: 0, color: "#bdbdbd" },
->>     link: { color: "#7db7ff", textDecoration: "none" },
->>
->>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
->>     list: { margin: 0, paddingLeft: 18 },
->>
->>     filters: { display: "flex", gap: 8, alignItems: "center", marginTop: 4, marginBottom: 8 },
->>     tab: (active) => ({
->>       padding: "6px 10px",
->>       borderRadius: 999,
->>       border: "1px solid #444",
->>       background: active ? "#fff" : "#2a2a2a",
->>       color: active ? "#000" : "#eee",
->>       cursor: "pointer"
->>     })
->>   };
->>
->>   return (
->>     <div style={s.page}>
->>       <div style={s.wrap}>
->>         {/* ====== TODO LIST PRIMERO ====== */}
->>         <section className="pdf-card" style={s.card}>
->>           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
->>           <p style={s.small}>
->>             <strong>Hecha con:</strong> React + Vite (frontend), Node.js + Express (backend), Axios, API REST (JSON), CORS.{" "}
->>             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
->>           </p>
->>
->>           {/* Contador */}
->>           <p style={s.small}><strong>Contador:</strong> Total {total} · Pendientes {pendientes} · Hechas {hechas}</p>
->>
->>           {/* Filtros (ocultos en impresión) */}
->>           <div className="hide-print" style={s.filters}>
->>             <button type="button" style={s.tab(filtro === "todas")} onClick={() => setFiltro("todas")}>Todas</button>
->>             <button type="button" style={s.tab(filtro === "pendientes")} onClick={() => setFiltro("pendientes")}>Pendientes</button>
->>             <button type="button" style={s.tab(filtro === "hechas")} onClick={() => setFiltro("hechas")}>Hechas</button>
->>           </div>
->>
->>           {/* Formulario (oculto en impresión) */}
->>           <form className="hide-print" onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
->>             <input
->>               ref={inputRef}
->>               value={text}
->>               onChange={e => setText(e.target.value)}
->>               placeholder="Nueva tarea..."
->>               maxLength={120}
->>               style={s.input}
->>             />
->>             <button type="submit" style={s.btn} disabled={!text.trim()}>
->>               Agregar
->>             </button>
->>           </form>
->>
->>           {/* Lista filtrada */}
->>           <ul style={s.ul}>
->>             {filteredTodos.map(t => (
->>               <li key={t.id} style={s.li}>
->>                 <span
->>                   className="pdf-task"
->>                   style={s.todoText(t.done)}
->>                   onClick={() => toggleTodo(t.id)}
->>                   title="Marcar / desmarcar"
->>                 >
->>                   {t.text}
->>                 </span>
->>                 <button className="hide-print" onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">
->>                   Eliminar
->>                 </button>
->>               </li>
->>             ))}
->>           </ul>
->>         </section>
->>
->>         {/* ====== BANNER CV ====== */}
->>         <section className="pdf-card" style={s.banner}>
->>           <h1 style={s.name}>{cv.nombre}</h1>
->>           <p style={s.sub}>{cv.titular}</p>
->>           <p style={s.meta}>
->>             📍 {cv.ubicacion}
->>             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
->>             {" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a>
->>             {" · "}
->>             <button className="hide-print" onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
->>               Imprimir / Descargar PDF
->>             </button>
->>           </p>
->>
->>           <p style={{marginTop: 12}}>{cv.perfil}</p>
->>
->>           <div style={s.grid2}>
->>             <div>
->>               <h2 style={s.h2}>Competencias</h2>
->>               <ul style={s.list}>
->>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
->>               </ul>
->>             </div>
->>             <div>
->>               <h2 style={s.h2}>Potencial empleable</h2>
->>               <ul style={s.list}>
->>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
->>               </ul>
->>             </div>
->>           </div>
->>
->>           <div style={{marginTop: 10}}>
->>             <h2 style={s.h2}>Proyecto fullstack</h2>
->>             <ul style={s.list}>
->>               {cv.proyectos.map((p, i) => (
->>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
->>               ))}
->>             </ul>
->>           </div>
->>         </section>
->>       </div>
->>     </div>
->>   );
->> }
->> '@ | Set-Content -Encoding UTF8 $APP
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Volver a la raíz, compilar y push (Render autodeploy)
-PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
-PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
+# 2) Reescribir server.js: seguridad, CORS por ALLOWED_ORIGIN, healthcheck y caché estática
+@'
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const compression = require("compression");
+const path = require("path");
 
-> todo-fullstack@1.0.0 build
-> cd client && npm install && npm run build
+const app = express();
+app.set("trust proxy", 1);              // necesario en Render para rate limit por IP
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(compression());
+app.use(express.json());
 
+// ===== CORS =====
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN; // si no existe, es dev/local
+if (ALLOWED_ORIGIN && ALLOWED_ORIGIN !== "*") {
+  app.use(cors({ origin: ALLOWED_ORIGIN, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"] }));
+} else {
+  app.use(cors()); // dev: abierto
+}
 
-up to date, audited 176 packages in 2s
+// ===== Rate limit solo para API =====
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
+app.use("/api", limiter);
 
-39 packages are looking for funding
-  run `npm fund` for details
+// ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
+const usePg = !!process.env.DATABASE_URL;
+let pool, db;
 
-found 0 vulnerabilities
+(async () => {
+  if (usePg) {
+    const { Pool } = require("pg");
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    });
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS todos (
+        id   SERIAL PRIMARY KEY,
+        text TEXT    NOT NULL,
+        done BOOLEAN NOT NULL DEFAULT false
+      );
+    `);
+    console.log("DB: Postgres listo.");
+  } else {
+    const fs = require("fs");
+    const Database = require("better-sqlite3");
+    const localDbPath = path.join(__dirname, "data", "todos.db");
+    fs.mkdirSync(path.dirname(localDbPath), { recursive: true });
+    db = new Database(localDbPath);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS todos (
+        id   INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT    NOT NULL,
+        done INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    console.log("DB: SQLite local lista en", path.join(__dirname, "data", "todos.db"));
+  }
+})().catch(err => console.error("Error inicializando DB:", err));
 
-> client@0.0.0 build
-> vite build
+// ===== HEALTHCHECK =====
+app.get("/health", async (req, res) => {
+  try {
+    if (usePg) { await pool.query("SELECT 1"); }
+    else { db.prepare("SELECT 1").get(); }
+    res.json({ ok: true, db: usePg ? "pg" : "sqlite" });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
-vite v7.1.4 building for production...
-✓ 79 modules transformed.
-dist/index.html                   0.46 kB │ gzip:  0.29 kB
-dist/assets/index-CV6lvuN4.css    1.26 kB │ gzip:  0.60 kB
-dist/assets/index-TMJlo85b.js   229.62 kB │ gzip: 75.65 kB
-✓ built in 3.64s
-PS C:\Users\Leandro\Documents\todo-fullstack> git add .
-warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'client/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
-PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "feat: filtros (Todas/Pendientes/Hechas) + contador en To-Do" 2>$null
-[main d53b76f] feat: filtros (Todas/Pendientes/Hechas) + contador en To-Do
- 2 files changed, 345 insertions(+), 498 deletions(-)
-PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
-Enumerating objects: 11, done.
-Counting objects: 100% (11/11), done.
-Delta compression using up to 2 threads
-Compressing objects: 100% (6/6), done.
-Writing objects: 100% (6/6), 4.04 KiB | 690.00 KiB/s, done.
-Total 6 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
-To https://github.com/Leandrotvr/todo-fullstack
-   df46d33..d53b76f  main -> main
-branch 'main' set up to track 'origin/main'.
-PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
-PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
-PS C:\Users\Leandro\Documents\todo-fullstack> $SERVER = Join-Path $ROOT "server.js"
-PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
-PS C:\Users\Leandro\Documents\todo-fullstack> $APP    = Join-Path $CLIENT "src\App.jsx"
-PS C:\Users\Leandro\Documents\todo-fullstack>
-PS C:\Users\Leandro\Documents\todo-fullstack> # 1) --- BACKEND: agregar edición y borrado masivo de completadas (DB dual) ---
-PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $ROOT
-PS C:\Users\Leandro\Documents\todo-fullstack> @'
->> const express = require("express");
->> const cors = require("cors");
->> const path = require("path");
->>
->> const app = express();
->> app.use(cors());
->> app.use(express.json());
->>
->> // ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
->> const usePg = !!process.env.DATABASE_URL;
->> let pool, db;
->>
->> (async () => {
->>   if (usePg) {
->>     const { Pool } = require("pg");
->>     pool = new Pool({
->>       connectionString: process.env.DATABASE_URL,
->>       ssl: { rejectUnauthorized: false },
->>     });
->>     await pool.query(`
->>       CREATE TABLE IF NOT EXISTS todos (
->>         id   SERIAL PRIMARY KEY,
->>         text TEXT    NOT NULL,
->>         done BOOLEAN NOT NULL DEFAULT false
->>       );
->>     `);
->>     console.log("DB: Postgres listo.");
->>   } else {
->>     const fs = require("fs");
->>     const Database = require("better-sqlite3");
->>     const localDbPath = path.join(__dirname, "data", "todos.db");
->>     fs.mkdirSync(path.dirname(localDbPath), { recursive: true });
->>     db = new Database(localDbPath);
->>     db.exec(`
->>       CREATE TABLE IF NOT EXISTS todos (
->>         id   INTEGER PRIMARY KEY AUTOINCREMENT,
->>         text TEXT    NOT NULL,
->>         done INTEGER NOT NULL DEFAULT 0
->>       );
->>     `);
->>     console.log("DB: SQLite local lista en", path.join(__dirname, "data", "todos.db"));
->>   }
->> })().catch(err => console.error("Error inicializando DB:", err));
->>
->> // ===== API =====
->> app.get("/api/todos", async (req, res) => {
->>   try {
->>     if (usePg) {
->>       const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
->>       return res.json(rows);
->>     }
->>     const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
->>       .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
->>     return res.json(rows);
->>   } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
->> });
->>
->> app.post("/api/todos", async (req, res) => {
->>   try {
->>     const text = (req.body?.text || "").toString().trim();
->>     if (!text) return res.status(400).json({ error: "text requerido" });
->>     if (usePg) {
->>       const { rows } = await pool.query("INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done", [text]);
->>       return res.json(rows[0]);
->>     }
->>     const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
->>     return res.json({ id: info.lastInsertRowid, text, done: false });
->>   } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
->> });
->>
->> // Toggle (se mantiene la ruta existente)
->> app.put("/api/todos/:id", async (req, res) => {
->>   try {
->>     const id = Number(req.params.id);
->>     if (usePg) await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
->>     else db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
->>     res.json({ success: true });
->>   } catch (e) { res.status(500).json({ error: "db_put_toggle", detail: e.message }); }
->> });
->>
->> // Editar texto (nuevo)
->> app.patch("/api/todos/:id", async (req, res) => {
->>   try {
->>     const id = Number(req.params.id);
->>     const text = (req.body?.text || "").toString().trim();
->>     if (!text) return res.status(400).json({ error: "text requerido" });
->>     if (usePg) {
->>       const { rows } = await pool.query(
->>         "UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done",
->>         [text, id]
->>       );
->>       if (!rows.length) return res.status(404).json({ error: "not_found" });
->>       return res.json(rows[0]);
->>     } else {
->>       const r = db.prepare("UPDATE todos SET text = ? WHERE id = ?").run(text, id);
->>       if (!r.changes) return res.status(404).json({ error: "not_found" });
->>       const row = db.prepare("SELECT id, text, done FROM todos WHERE id = ?").get(id);
->>       return res.json({ id: row.id, text: row.text, done: !!row.done });
->>     }
->>   } catch (e) { res.status(500).json({ error: "db_patch_text", detail: e.message }); }
->> });
->>
->> // Borrar una
->> app.delete("/api/todos/:id", async (req, res) => {
->>   try {
->>     const id = Number(req.params.id);
->>     if (usePg) await pool.query("DELETE FROM todos WHERE id = $1", [id]);
->>     else db.prepare("DELETE FROM todos WHERE id = ?").run(id);
->>     res.json({ success: true });
->>   } catch (e) { res.status(500).json({ error: "db_delete_one", detail: e.message }); }
->> });
->>
->> // Borrar todas las completadas (nuevo)
->> app.delete("/api/todos/completed", async (req, res) => {
->>   try {
->>     if (usePg) await pool.query("DELETE FROM todos WHERE done = TRUE");
->>     else db.prepare("DELETE FROM todos WHERE done = 1").run();
->>     res.json({ success: true });
->>   } catch (e) { res.status(500).json({ error: "db_delete_completed", detail: e.message }); }
->> });
->>
->> // ===== FRONTEND build + fallback SPA =====
->> const distPath = path.join(__dirname, "client", "dist");
->> app.use(express.static(distPath));
->> app.use((req, res, next) => {
->>   if (req.method === "GET" && !req.path.startsWith("/api")) {
->>     return res.sendFile(path.join(distPath, "index.html"));
->>   }
->>   next();
->> });
->>
->> const PORT = process.env.PORT || 4000;
->> app.listen(PORT, () =>
->>   console.log(`Servidor único en http://localhost:${PORT} (DB: ${usePg ? "Postgres" : "SQLite"})`)
->> );
->> '@ | Set-Content -Encoding UTF8 $SERVER
-PS C:\Users\Leandro\Documents\todo-fullstack>
-PS C:\Users\Leandro\Documents\todo-fullstack> # 2) --- FRONTEND: edición inline (Enter guarda, Esc cancela) + botón "Borrar completadas" ---
-PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
-PS C:\Users\Leandro\Documents\todo-fullstack\client> @'
->> import { useState, useEffect, useRef } from "react";
->> import axios from "axios";
->>
->> export default function App() {
->>   // ====== CONTACTO ======
->>   const whatsapp = "5493777416857";
->>   const waHref = `https://wa.me/${whatsapp}?text=Hola%20Leandro%2C%20vi%20tu%20CV%20web`;
->>
->>   // ====== DATOS CV ======
->>   const cv = {
->>     nombre: "Leandro Maciel",
->>     titular: "Asistente Virtual · Soporte al Cliente · Data Entry",
->>     ubicacion: "Mercedes, Corrientes — Argentina",
->>     email: "leandrotvr@gmail.com",
->>     perfil:
->>       "Docente en Geografía y Ciencias Sociales con experiencia en gestión de grupos y producción de materiales digitales. Orientado a asistencia virtual, soporte al cliente, data entry y redacción. Comunicación clara, organización y aprendizaje continuo.",
->>     competencias: [
->>       "Comunicación clara","Gestión del tiempo","Atención al cliente",
->>       "Redacción y edición","Trabajo remoto","Autonomía","Trabajo en equipo",
->>       "Google Workspace · Microsoft Office · Sheets/Excel · Trello · Notion · Slack · Zoom",
->>     ],
->>     potencial: [
->>       "Asistente Virtual (ES/EN): correo, agenda, coordinación y reportes",
->>       "Customer Support (chat/email)",
->>       "Data Entry / Data Ops en planillas y CRMs",
->>       "QA Manual junior (pruebas funcionales, reporte de bugs)",
->>       "Soporte técnico básico (software y cuentas)",
->>       "Docencia/tutorías online (Geografía y Cs. Sociales)",
->>       "Redacción y estandarización de plantillas/procesos",
->>     ],
->>     proyectos: [{ t: "To-Do List (Live)", url: "https://todo-fullstack-30wd.onrender.com/" }],
->>   };
->>
->>   // ====== TODO LIST ======
->>   const [todos, setTodos] = useState([]);
->>   const [text, setText] = useState("");
->>   const [filtro, setFiltro] = useState("todas"); // todas | pendientes | hechas
->>   const [editingId, setEditingId] = useState(null);
->>   const [editingText, setEditingText] = useState("");
->>   const inputRef = useRef(null);
->>
->>   useEffect(() => {
->>     axios.get("/api/todos").then(res => setTodos(res.data));
->>   }, []);
->>
->>   const addTodo = () => {
->>     const v = text.trim();
->>     if (!v) return;
->>     axios.post("/api/todos", { text: v }).then(res => {
->>       setTodos(prev => [res.data, ...prev]);
->>       setText("");
->>       inputRef.current?.focus();
->>     });
->>   };
->>
->>   const toggleTodo = (id) => {
->>     if (editingId === id) return; // si está editando, no togglear
->>     axios.put(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
->>     });
->>   };
->>
->>   const startEdit = (t) => {
->>     setEditingId(t.id);
->>     setEditingText(t.text);
->>   };
->>
->>   const saveEdit = (id) => {
->>     const v = editingText.trim();
->>     if (!v) { cancelEdit(); return; }
->>     axios.patch(`/api/todos/${id}`, { text: v }).then(res => {
->>       const updated = res.data?.text ? res.data : { id, text: v, done: todos.find(x => x.id===id)?.done };
->>       setTodos(prev => prev.map(t => t.id === id ? { ...t, text: updated.text } : t));
->>       setEditingId(null);
->>       setEditingText("");
->>     });
->>   };
->>
->>   const onEditKey = (e, id) => {
->>     if (e.key === "Enter") { e.preventDefault(); saveEdit(id); }
->>     if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
->>   };
->>
->>   const cancelEdit = () => {
->>     setEditingId(null);
->>     setEditingText("");
->>   };
->>
->>   const deleteTodo = (id) => {
->>     axios.delete(`/api/todos/${id}`).then(() => {
->>       setTodos(prev => prev.filter(t => t.id !== id));
->>     });
->>   };
->>
->>   const clearCompleted = () => {
->>     axios.delete("/api/todos/completed").then(() => {
->>       setTodos(prev => prev.filter(t => !t.done));
->>     });
->>   };
->>
->>   // Derivados
->>   const total = todos.length;
->>   const hechas = todos.filter(t => t.done).length;
->>   const pendientes = total - hechas;
->>   const filteredTodos = filtro === "hechas" ? todos.filter(t => t.done)
->>                         : filtro === "pendientes" ? todos.filter(t => !t.done)
->>                         : todos;
->>
->>   // ====== ESTILOS ======
->>   const s = {
->>     page: { minHeight: "100vh", margin: 0, background: "#121212", color: "#eee", fontFamily: "system-ui, sans-serif" },
->>     wrap: { maxWidth: 1000, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "1fr", gap: 16 },
->>
->>     h2: { fontSize: 20, margin: "0 0 10px 0", borderBottom: "1px solid #2a2a2a", paddingBottom: 6 },
->>     small: { color: "#aaa", fontSize: 14 },
->>
->>     card: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>     row: { display: "flex", gap: 8, marginTop: 10, marginBottom: 10 },
->>     input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#eee" },
->>     btn: { padding: "10px 16px", borderRadius: 8, border: "1px solid #555", background: "#333", color: "#fff", cursor: "pointer" },
->>
->>     ul: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
->>     li: { display: "flex", alignItems: "center", gap: 8, background: "#202020", border: "1px solid #323232", borderRadius: 10, padding: "10px 12px" },
->>     todoText: done => ({ flex: 1, cursor: "pointer", textDecoration: done ? "line-through" : "none", color: done ? "#aaa" : "#fff" }),
->>     del: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7a2b2b", background: "#b43b3b", color: "#fff", cursor: "pointer" },
->>
->>     banner: { background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16 },
->>     name: { fontSize: 28, fontWeight: 800, margin: 0 },
->>     sub: { margin: "4px 0 8px 0", color: "#c8c8c8" },
->>     meta: { margin: 0, color: "#bdbdbd" },
->>     link: { color: "#7db7ff", textDecoration: "none" },
->>
->>     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
->>     list: { margin: 0, paddingLeft: 18 },
->>
->>     filters: { display: "flex", gap: 8, alignItems: "center", marginTop: 4, marginBottom: 8 },
->>     tab: (active) => ({
->>       padding: "6px 10px",
->>       borderRadius: 999,
->>       border: "1px solid #444",
->>       background: active ? "#fff" : "#2a2a2a",
->>       color: active ? "#000" : "#eee",
->>       cursor: "pointer"
->>     })
->>   };
->>
->>   return (
->>     <div style={s.page}>
->>       <div style={s.wrap}>
->>         {/* ====== TODO LIST ====== */}
->>         <section className="pdf-card" style={s.card}>
->>           <h2 style={s.h2}>Mis tareas (To-Do List)</h2>
->>           <p style={s.small}>
->>             <strong>Hecha con:</strong> React + Vite (frontend), Node.js + Express (backend), Axios, API REST (JSON), CORS.{" "}
->>             <strong>Competencias:</strong> CRUD, hooks (useState/useEffect/useRef), asincronía (promesas), validaciones básicas, SPA y build de producción.
->>           </p>
->>
->>           <p style={s.small}><strong>Contador:</strong> Total {total} · Pendientes {pendientes} · Hechas {hechas}</p>
->>
->>           <div className="hide-print" style={s.filters}>
->>             <button type="button" style={s.tab(filtro === "todas")} onClick={() => setFiltro("todas")}>Todas</button>
->>             <button type="button" style={s.tab(filtro === "pendientes")} onClick={() => setFiltro("pendientes")}>Pendientes</button>
->>             <button type="button" style={s.tab(filtro === "hechas")} onClick={() => setFiltro("hechas")}>Hechas</button>
->>             <div style={{flex:1}} />
->>             <button type="button" className="hide-print" style={s.btn} onClick={clearCompleted} title="Borrar todas las completadas">Borrar completadas</button>
->>           </div>
->>
->>           {/* Form nueva tarea (Enter para agregar) */}
->>           <form className="hide-print" onSubmit={(e) => { e.preventDefault(); addTodo(); }} style={s.row}>
->>             <input
->>               ref={inputRef}
->>               value={text}
->>               onChange={e => setText(e.target.value)}
->>               placeholder="Nueva tarea..."
->>               maxLength={120}
->>               style={s.input}
->>             />
->>             <button type="submit" style={s.btn} disabled={!text.trim()}>
->>               Agregar
->>             </button>
->>           </form>
->>
->>           {/* Lista con edición inline */}
->>           <ul style={s.ul}>
->>             {filteredTodos.map(t => (
->>               <li key={t.id} style={s.li}>
->>                 {editingId === t.id ? (
->>                   <input
->>                     autoFocus
->>                     value={editingText}
->>                     onChange={e => setEditingText(e.target.value)}
->>                     onKeyDown={e => onEditKey(e, t.id)}
->>                     onBlur={() => saveEdit(t.id)}
->>                     style={{ ...s.input, flex: 1, background: "#2a2a2a" }}
->>                     maxLength={120}
->>                   />
->>                 ) : (
->>                   <span
->>                     className="pdf-task"
->>                     style={s.todoText(t.done)}
->>                     onDoubleClick={() => startEdit(t)}
->>                     onClick={() => toggleTodo(t.id)}
->>                     title="Doble clic para editar · Clic para completar"
->>                   >
->>                     {t.text}
->>                   </span>
->>                 )}
->>                 <button className="hide-print" onClick={() => startEdit(t)} style={s.btn} title="Editar">Editar</button>
->>                 <button className="hide-print" onClick={() => deleteTodo(t.id)} style={s.del} title="Eliminar">Eliminar</button>
->>               </li>
->>             ))}
->>           </ul>
->>         </section>
->>
->>         {/* ====== BANNER CV ====== */}
->>         <section className="pdf-card" style={s.banner}>
->>           <h1 style={s.name}>{cv.nombre}</h1>
->>           <p style={s.sub}>{cv.titular}</p>
->>           <p style={s.meta}>
->>             📍 {cv.ubicacion}
->>             {" · "}✉ <a href={`mailto:${cv.email}`} style={s.link}>{cv.email}</a>
->>             {" · "}📞 <a href={waHref} style={s.link}>WhatsApp</a>
->>             {" · "}
->>             <button className="hide-print" onClick={() => window.print()} style={{...s.btn, padding: "4px 10px"}} title="Imprimir o guardar como PDF">
->>               Imprimir / Descargar PDF
->>             </button>
->>           </p>
->>
->>           <p style={{marginTop: 12}}>{cv.perfil}</p>
->>
->>           <div style={s.grid2}>
->>             <div>
->>               <h2 style={s.h2}>Competencias</h2>
->>               <ul style={s.list}>
->>                 {cv.competencias.map((c, i) => <li key={i}>{c}</li>)}
->>               </ul>
->>             </div>
->>             <div>
->>               <h2 style={s.h2}>Potencial empleable</h2>
->>               <ul style={s.list}>
->>                 {cv.potencial.map((p, i) => <li key={i}>{p}</li>)}
->>               </ul>
->>             </div>
->>           </div>
->>
->>           <div style={{marginTop: 10}}>
->>             <h2 style={s.h2}>Proyecto fullstack</h2>
->>             <ul style={s.list}>
->>               {cv.proyectos.map((p, i) => (
->>                 <li key={i}><a style={s.link} href={p.url} target="_blank" rel="noreferrer">{p.t}</a></li>
->>               ))}
->>             </ul>
->>           </div>
->>         </section>
->>       </div>
->>     </div>
->>   );
->> }
->> '@ | Set-Content -Encoding UTF8 $APP
-PS C:\Users\Leandro\Documents\todo-fullstack\client>
-PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) --- COMPILAR Y PUBLICAR ---
-PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
-PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
+// ===== API =====
+app.get("/api/todos", async (req, res) => {
+  try {
+    if (usePg) {
+      const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
+      return res.json(rows);
+    }
+    const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
+      .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
+    return res.json(rows);
+  } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
+});
 
-> todo-fullstack@1.0.0 build
-> cd client && npm install && npm run build
+app.post("/api/todos", async (req, res) => {
+  try {
+    const text = (req.body?.text || "").toString().trim();
+    if (!text) return res.status(400).json({ error: "text requerido" });
+    if (usePg) {
+      const { rows } = await pool.query("INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done", [text]);
+      return res.json(rows[0]);
+    }
+    const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
+    return res.json({ id: info.lastInsertRowid, text, done: false });
+  } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
+});
 
+// Toggle done
+app.put("/api/todos/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (usePg) await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
+    else db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: "db_put_toggle", detail: e.message }); }
+});
 
-up to date, audited 176 packages in 2s
+// Editar texto
+app.patch("/api/todos/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const text = (req.body?.text || "").toString().trim();
+    if (!text) return res.status(400).json({ error: "text requerido" });
+    if (usePg) {
+      const { rows } = await pool.query("UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done", [text, id]);
+      if (!rows.length) return res.status(404).json({ error: "not_found" });
+      return res.json(rows[0]);
+    } else {
+      const r = db.prepare("UPDATE todos SET text = ? WHERE id = ?").run(text, id);
+      if (!r.changes) return res.status(404).json({ error: "not_found" });
+      const row = db.prepare("SELECT id, text, done FROM todos WHERE id = ?").get(id);
+      return res.json({ id: row.id, text: row.text, done: !!row.done });
+    }
+  } catch (e) { res.status(500).json({ error: "db_patch_text", detail: e.message }); }
+});
 
-39 packages are looking for funding
-  run `npm fund` for details
+// Borrar una
+app.delete("/api/todos/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (usePg) await pool.query("DELETE FROM todos WHERE id = $1", [id]);
+    else db.prepare("DELETE FROM todos WHERE id = ?").run(id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: "db_delete_one", detail: e.message }); }
+});
 
-found 0 vulnerabilities
+// Borrar completadas
+app.delete("/api/todos/completed", async (req, res) => {
+  try {
+    if (usePg) await pool.query("DELETE FROM todos WHERE done = TRUE");
+    else db.prepare("DELETE FROM todos WHERE done = 1").run();
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: "db_delete_completed", detail: e.message }); }
+});
 
-> client@0.0.0 build
-> vite build
+// ===== FRONTEND: estáticos + caché =====
+const distPath = path.join(__dirname, "client", "dist");
+// Cache agresiva para assets con hash; no-cache para index.html
+app.use(express.static(distPath, {
+  maxAge: "1y",
+  setHeaders: (res, p) => {
+    if (p.endsWith("index.html")) {
+      res.setHeader("Cache-Control", "no-cache");
+    } else if (p.includes(`${path.sep}assets${path.sep}`)) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    }
+  }
+}));
 
-vite v7.1.4 building for production...
-✓ 79 modules transformed.
-dist/index.html                   0.46 kB │ gzip:  0.30 kB
-dist/assets/index-CV6lvuN4.css    1.26 kB │ gzip:  0.60 kB
-dist/assets/index-Dx7w1ZYq.js   230.70 kB │ gzip: 76.01 kB
-✓ built in 3.67s
-PS C:\Users\Leandro\Documents\todo-fullstack> git add .
-warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'client/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'server.js', LF will be replaced by CRLF the next time Git touches it
-PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "feat: edición inline (Enter/Esc) + borrar completadas; API PATCH y bulk delete" 2>$null
+// Fallback SPA compatible con Express 5 (sin wildcard)
+app.use((req, res, next) => {
+  if (req.method === "GET" && !req.path.startsWith("/api")) {
+    return res.sendFile(path.join(distPath, "index.html"));
+  }
+  next();
+});
 
-[main 368e440] feat: edición inline (Enter/Esc) + borrar completadas; API PATCH y bulk delete
- 3 files changed, 338 insertions(+), 367 deletions(-)
-PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
-Enumerating objects: 13, done.
-Counting objects: 100% (13/13), done.
-Delta compression using up to 2 threads
-Compressing objects: 100% (7/7), done.
-Writing objects: 100% (7/7), 4.46 KiB | 1.12 MiB/s, done.
-Total 7 (delta 6), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (6/6), completed with 5 local objects.
-To https://github.com/Leandrotvr/todo-fullstack
-   d53b76f..368e440  main -> main
-branch 'main' set up to track 'origin/main'.
-PS C:\Users\Leandro\Documents\todo-fullstack>
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () =>
+  console.log(`Servidor único en http://localhost:${PORT} (DB: ${usePg ? "Postgres" : "SQLite"})`)
+);
+'@ | Set-Content -Encoding UTF8 $SERVER
+
+# 3) Actualizar render.yaml: ALLOWED_ORIGIN + healthCheckPath
+@'
+services:
+  - type: web
+    name: todo-fullstack
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run server
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ALLOWED_ORIGIN
+        value: https://todo-fullstack-30wd.onrender.com
+'@ | Set-Content -Encoding UTF8 $RENDER
+
+# 4) Compilar y push (Render autodeploy por Blueprint)
+npm run build
+git add .
+git commit -m "chore: seguridad (helmet+rate-limit), CORS por ALLOWED_ORIGIN, /health y caché estática" 2>$null
+git push -u origin main
