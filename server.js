@@ -1,10 +1,27 @@
 ﻿const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const compression = require("compression");
 const path = require("path");
 
 const app = express();
-app.use(cors());
+app.set("trust proxy", 1);              // necesario en Render para rate limit por IP
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(compression());
 app.use(express.json());
+
+// ===== CORS =====
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN; // si no existe, es dev/local
+if (ALLOWED_ORIGIN && ALLOWED_ORIGIN !== "*") {
+  app.use(cors({ origin: ALLOWED_ORIGIN, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"] }));
+} else {
+  app.use(cors()); // dev: abierto
+}
+
+// ===== Rate limit solo para API =====
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
+app.use("/api", limiter);
 
 // ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
 const usePg = !!process.env.DATABASE_URL;
@@ -42,6 +59,17 @@ let pool, db;
   }
 })().catch(err => console.error("Error inicializando DB:", err));
 
+// ===== HEALTHCHECK =====
+app.get("/health", async (req, res) => {
+  try {
+    if (usePg) { await pool.query("SELECT 1"); }
+    else { db.prepare("SELECT 1").get(); }
+    res.json({ ok: true, db: usePg ? "pg" : "sqlite" });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ===== API =====
 app.get("/api/todos", async (req, res) => {
   try {
@@ -68,7 +96,7 @@ app.post("/api/todos", async (req, res) => {
   } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
 });
 
-// Toggle (se mantiene la ruta existente)
+// Toggle done
 app.put("/api/todos/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -78,17 +106,14 @@ app.put("/api/todos/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: "db_put_toggle", detail: e.message }); }
 });
 
-// Editar texto (nuevo)
+// Editar texto
 app.patch("/api/todos/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     const text = (req.body?.text || "").toString().trim();
     if (!text) return res.status(400).json({ error: "text requerido" });
     if (usePg) {
-      const { rows } = await pool.query(
-        "UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done",
-        [text, id]
-      );
+      const { rows } = await pool.query("UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done", [text, id]);
       if (!rows.length) return res.status(404).json({ error: "not_found" });
       return res.json(rows[0]);
     } else {
@@ -110,7 +135,7 @@ app.delete("/api/todos/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: "db_delete_one", detail: e.message }); }
 });
 
-// Borrar todas las completadas (nuevo)
+// Borrar completadas
 app.delete("/api/todos/completed", async (req, res) => {
   try {
     if (usePg) await pool.query("DELETE FROM todos WHERE done = TRUE");
@@ -119,9 +144,21 @@ app.delete("/api/todos/completed", async (req, res) => {
   } catch (e) { res.status(500).json({ error: "db_delete_completed", detail: e.message }); }
 });
 
-// ===== FRONTEND build + fallback SPA =====
+// ===== FRONTEND: estáticos + caché =====
 const distPath = path.join(__dirname, "client", "dist");
-app.use(express.static(distPath));
+// Cache agresiva para assets con hash; no-cache para index.html
+app.use(express.static(distPath, {
+  maxAge: "1y",
+  setHeaders: (res, p) => {
+    if (p.endsWith("index.html")) {
+      res.setHeader("Cache-Control", "no-cache");
+    } else if (p.includes(`${path.sep}assets${path.sep}`)) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    }
+  }
+}));
+
+// Fallback SPA compatible con Express 5 (sin wildcard)
 app.use((req, res, next) => {
   if (req.method === "GET" && !req.path.startsWith("/api")) {
     return res.sendFile(path.join(distPath, "index.html"));

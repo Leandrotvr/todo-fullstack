@@ -1,7 +1,12 @@
-services:
+﻿services:
   - type: web
     name: todo-fullstack
     env: node
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm run server
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ALLOWED_ORIGIN
+        value: https://todo-fullstack-30wd.onrender.com
