@@ -1,0 +1,10 @@
+﻿{
+  "name": "Leandro Maciel – To-Do & CV",
+  "short_name": "Todo CV",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "lang": "es-AR"
+}
