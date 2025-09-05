@@ -1208,4 +1208,195 @@ remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
 To https://github.com/Leandrotvr/todo-fullstack
    8bb835d..3341be8  main -> main
 branch 'main' set up to track 'origin/main'.
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $CLIENT = Join-Path $ROOT "client"
+PS C:\Users\Leandro\Documents\todo-fullstack> $PUBLIC = Join-Path $CLIENT "public"
+PS C:\Users\Leandro\Documents\todo-fullstack> $INDEX  = Join-Path $CLIENT "index.html"
+PS C:\Users\Leandro\Documents\todo-fullstack> $MAIN   = Join-Path $CLIENT "src\main.jsx"
 PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Asegurar /public
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $CLIENT
+PS C:\Users\Leandro\Documents\todo-fullstack\client> New-Item -ItemType Directory -Force -Path $PUBLIC | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 2) Manifest PWA (sin íconos por simplicidad; opcional agregarlos luego)
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @"
+>> {
+>>   "name": "Leandro Maciel – To-Do & CV",
+>>   "short_name": "Todo CV",
+>>   "start_url": "/",
+>>   "scope": "/",
+>>   "display": "standalone",
+>>   "background_color": "#121212",
+>>   "theme_color": "#121212",
+>>   "lang": "es-AR"
+>> }
+>> "@ | Set-Content -Encoding UTF8 (Join-Path $PUBLIC "manifest.webmanifest")
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 3) Service Worker: cache de app shell + assets; GET /api/todos => red primero, cache fallback
+
+PS C:\Users\Leandro\Documents\todo-fullstack\client> @"
+>> const VERSION = 'v1';
+>> const APP_SHELL = ['/', '/index.html'];
+>> const API_PREFIX = '/api/todos';
+>>
+>> self.addEventListener('install', (e) => {
+>>   e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP_SHELL)));
+>>   self.skipWaiting();
+>> });
+>>
+>> self.addEventListener('activate', (e) => {
+>>   e.waitUntil(
+>>     caches.keys().then(keys =>
+>>       Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))
+>>     )
+>>   );
+>>   self.clients.claim();
+>> });
+>>
+>> self.addEventListener('fetch', (e) => {
+>>   const url = new URL(e.request.url);
+>>
+>>   // Sólo cachear GET
+>>   if (e.request.method !== 'GET') return;
+>>
+>>   // Assets con hash (cache-first)
+>>   if (url.pathname.includes('/assets/')) {
+>>     e.respondWith(
+>>       caches.match(e.request).then(hit => hit || fetch(e.request).then(r => {
+>>         const copy = r.clone();
+>>         caches.open(VERSION).then(c => c.put(e.request, copy));
+>>         return r;
+>>       }))
+>>     );
+>>     return;
+>>   }
+>>
+>>   // API (network-first con fallback a cache)
+>>   if (url.pathname.startsWith(API_PREFIX)) {
+>>     e.respondWith(
+>>       fetch(e.request).then(r => {
+>>         const copy = r.clone();
+>>         caches.open(VERSION).then(c => c.put(e.request, copy));
+>>         return r;
+>>       }).catch(() => caches.match(e.request))
+>>     );
+>>     return;
+>>   }
+>>
+>>   // index.html y demás (stale-while-revalidate simple)
+>>   e.respondWith(
+>>     caches.match(e.request).then(hit => {
+>>       const fetchP = fetch(e.request).then(r => {
+>>         const copy = r.clone();
+>>         caches.open(VERSION).then(c => c.put(e.request, copy));
+>>         return r;
+>>       }).catch(() => hit || caches.match('/index.html'));
+>>       return hit || fetchP;
+>>     })
+>>   );
+>> });
+>> "@ | Set-Content -Encoding UTF8 (Join-Path $PUBLIC "sw.js")
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 4) Asegurar <link rel="manifest"> en index.html (si no existe, lo inyecta)
+PS C:\Users\Leandro\Documents\todo-fullstack\client> $idx = Get-Content $INDEX -Raw
+PS C:\Users\Leandro\Documents\todo-fullstack\client> if ($idx -notmatch 'rel="?manifest"?') {
+>>   $idx = $idx -replace '</head>', '  <link rel="manifest" href="/manifest.webmanifest" />' + [Environment]::NewLine + '</head>'
+>>   $idx | Set-Content -Encoding UTF8 $INDEX
+>> }
+El operador -ireplace solo permite que lo sigan dos elementos, no 4.
+En línea: 2 Carácter: 15
++   $idx = $idx -replace '</head>', '  <link rel="manifest" href="/mani ...
++               ~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Object[]:Object[]) [], RuntimeException
+    + FullyQualifiedErrorId : BadReplaceArgument
+
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 5) Registrar el SW en main.jsx (si no está)
+PS C:\Users\Leandro\Documents\todo-fullstack\client> $main = Get-Content $MAIN -Raw
+PS C:\Users\Leandro\Documents\todo-fullstack\client> if ($main -notmatch 'serviceWorker.register') {
+>>   $main += @"
+>>
+>> if ('serviceWorker' in navigator) {
+>>   window.addEventListener('load', () => {
+>>     navigator.serviceWorker.register('/sw.js').catch(console.error);
+>>   });
+>> }
+>> "@
+>>   $main | Set-Content -Encoding UTF8 $MAIN
+>> }
+Set-Content : Caracteres no válidos en la ruta de acceso.
+En línea: 10 Carácter: 11
++   $main | Set-Content -Encoding UTF8 $MAIN
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (C:\Users\Leandr...error);
+  });
+}:String) [Set-Content], ArgumentException
+    + FullyQualifiedErrorId : ItemExistsArgumentError,Microsoft.PowerShell.Commands.SetContentCommand
+
+Set-Content : Caracteres no válidos en la ruta de acceso.
+En línea: 10 Carácter: 11
++   $main | Set-Content -Encoding UTF8 $MAIN
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (C:\Users\Leandr...error);
+  });
+}:String) [Set-Content], ArgumentException
+    + FullyQualifiedErrorId : ItemExistsArgumentError,Microsoft.PowerShell.Commands.SetContentCommand
+
+Set-Content : Caracteres no válidos en la ruta de acceso.
+En línea: 10 Carácter: 11
++   $main | Set-Content -Encoding UTF8 $MAIN
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (C:\Users\Leandr...error);
+  });
+}:String) [Set-Content], ArgumentException
+    + FullyQualifiedErrorId : GetContentWriterArgumentError,Microsoft.PowerShell.Commands.SetContentCommand
+
+PS C:\Users\Leandro\Documents\todo-fullstack\client>
+PS C:\Users\Leandro\Documents\todo-fullstack\client> # 6) Build y push
+PS C:\Users\Leandro\Documents\todo-fullstack\client> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 2s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 80 modules transformed.
+dist/index.html                   2.27 kB │ gzip:  0.90 kB
+dist/assets/index-CV6lvuN4.css    1.26 kB │ gzip:  0.60 kB
+dist/assets/index-CHzpTGag.js   233.15 kB │ gzip: 76.98 kB
+✓ built in 3.81s
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of 'client/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/public/manifest.webmanifest', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/public/sw.js', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "feat(PWA): manifest + service worker (offline básico e installable)" 2>$null
+[main f975306] feat(PWA): manifest + service worker (offline básico e installable)
+ 4 files changed, 204 insertions(+)
+ create mode 100644 client/public/manifest.webmanifest
+ create mode 100644 client/public/sw.js
+PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
+Enumerating objects: 13, done.
+Counting objects: 100% (13/13), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (8/8), done.
+Writing objects: 100% (8/8), 3.01 KiB | 617.00 KiB/s, done.
+Total 8 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To https://github.com/Leandrotvr/todo-fullstack
+   3341be8..f975306  main -> main
+branch 'main' set up to track 'origin/main'.
+PS C:\Users\Leandro\Documents\todo-fullstack>
+
