@@ -1,13 +1,52 @@
-<!doctype html>
-<html lang="en">
+﻿<!doctype html>
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Leandro Maciel – To-Do & CV</title>
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://todo-fullstack-30wd.onrender.com" />
+
+    <!-- Descripción -->
+    <meta name="description" content="To-Do List + CV online. Proyecto fullstack (React+Vite, Node+Express, API REST, DB). Contacto: leandrotvr@gmail.com · WhatsApp." />
+    <meta name="theme-color" content="#121212" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Leandro Maciel" />
+    <meta property="og:url" content="https://todo-fullstack-30wd.onrender.com" />
+    <meta property="og:title" content="Leandro Maciel – To-Do & CV" />
+    <meta property="og:description" content="To-Do List + CV online. Proyecto fullstack (React+Vite, Node+Express, API REST, DB). Contacto: leandrotvr@gmail.com · WhatsApp." />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Leandro Maciel – To-Do & CV" />
+    <meta name="twitter:description" content="To-Do List + CV online. Proyecto fullstack (React+Vite, Node+Express, API REST, DB). Contacto: leandrotvr@gmail.com · WhatsApp." />
+
+    <!-- Print helpers: ocultar controles con .hide-print -->
+    <style>
+      @media print {
+        .hide-print { display: none !important; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Datos estructurados (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Leandro Maciel",
+      "jobTitle": "Asistente Virtual / Soporte al Cliente / Data Entry",
+      "email": "mailto:leandrotvr@gmail.com",
+      "address": { "@type": "PostalAddress", "addressCountry": "AR", "addressLocality": "Mercedes, Corrientes" },
+      "url": "https://todo-fullstack-30wd.onrender.com",
+      "sameAs": ["https://wa.me/5493777416857"]
+    }
+    </script>
   </body>
 </html>

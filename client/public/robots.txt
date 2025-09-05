@@ -1,0 +1,3 @@
+﻿User-agent: *
+Allow: /
+Sitemap: https://todo-fullstack-30wd.onrender.com/sitemap.xml
