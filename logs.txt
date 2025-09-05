@@ -1,206 +1,539 @@
-# === RUTAS ===
-$ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
-$SERVER = Join-Path $ROOT "server.js"
-$RENDER = Join-Path $ROOT "render.yaml"
+Windows PowerShell
+Copyright (C) Microsoft Corporation. Todos los derechos reservados.
 
-# 1) Ir a raíz e instalar middlewares de prod
-Set-Location $ROOT
-npm install compression helmet express-rate-limit
+Instale la versión más reciente de PowerShell para obtener nuevas características y mejoras. https://aka.ms/PSWindows
 
-# 2) Reescribir server.js: seguridad, CORS por ALLOWED_ORIGIN, healthcheck y caché estática
-@'
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-const compression = require("compression");
-const path = require("path");
+PS C:\Users\Leandro\Documents\todo-fullstack> # === CONFIG ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $BASE = 'https://todo-fullstack-30wd.onrender.com'
+PS C:\Users\Leandro\Documents\todo-fullstack> $API  = "$($BASE.TrimEnd('/'))/api/todos"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Crear una tarea-marcador única
+PS C:\Users\Leandro\Documents\todo-fullstack> $marker = "PG-PERSIST-TEST " + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+PS C:\Users\Leandro\Documents\todo-fullstack> $payload = @{ text = $marker } | ConvertTo-Json
+PS C:\Users\Leandro\Documents\todo-fullstack> Invoke-RestMethod $API -Method POST -Body $payload -ContentType 'application/json' | Out-Null
+PS C:\Users\Leandro\Documents\todo-fullstack> "`nMarcador creado: $marker`n"
 
-const app = express();
-app.set("trust proxy", 1);              // necesario en Render para rate limit por IP
-app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(compression());
-app.use(express.json());
+Marcador creado: PG-PERSIST-TEST 2025-09-05 08:38:40
 
-// ===== CORS =====
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN; // si no existe, es dev/local
-if (ALLOWED_ORIGIN && ALLOWED_ORIGIN !== "*") {
-  app.use(cors({ origin: ALLOWED_ORIGIN, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"] }));
-} else {
-  app.use(cors()); // dev: abierto
-}
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) Pausa para que hagas el redeploy en Render
+PS C:\Users\Leandro\Documents\todo-fullstack> Read-Host ">>> En Render: Manual Deploy el servicio y esperá a que quede Live. Luego presioná ENTER acá para continuar"
+>>> En Render: Manual Deploy el servicio y esperá a que quede Live. Luego presioná ENTER acá para continuar:
 
-// ===== Rate limit solo para API =====
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
-app.use("/api", limiter);
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) Listar y verificar si persiste tras el reinicio
+PS C:\Users\Leandro\Documents\todo-fullstack> $list = Invoke-RestMethod $API
+PS C:\Users\Leandro\Documents\todo-fullstack> # Normalizar (array) por si PowerShell envuelve
+PS C:\Users\Leandro\Documents\todo-fullstack> $items = if ($list -is [System.Array]) { $list } elseif ($list.PSObject.Properties.Name -contains 'value') { $list.value } else { @($list) }
+PS C:\Users\Leandro\Documents\todo-fullstack> $exists = ($items | ForEach-Object { $_.text }) -contains $marker
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> if ($exists) { "✅ Persistente (estás usando Postgres via DATABASE_URL)." }
+✅ Persistente (estás usando Postgres via DATABASE_URL).
+PS C:\Users\Leandro\Documents\todo-fullstack> else { "❌ NO persistente (contenedor efímero). Falta configurar DATABASE_URL en Render." }
+else : El término 'else' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable. Compruebe si escribió
+correctamente el nombre o, si incluyó una ruta de acceso, compruebe que dicha ruta es correcta e inténtelo de nuevo.
+En línea: 1 Carácter: 1
++ else { "❌ NO persistente (contenedor efímero). Falta configurar DATAB ...
++ ~~~~
+    + CategoryInfo          : ObjectNotFound: (else:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
 
-// ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
-const usePg = !!process.env.DATABASE_URL;
-let pool, db;
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $SERVER = Join-Path $ROOT "server.js"
+PS C:\Users\Leandro\Documents\todo-fullstack> $RENDER = Join-Path $ROOT "render.yaml"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir a raíz e instalar middlewares de prod
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> npm install compression helmet express-rate-limit
 
-(async () => {
-  if (usePg) {
-    const { Pool } = require("pg");
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-    });
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS todos (
-        id   SERIAL PRIMARY KEY,
-        text TEXT    NOT NULL,
-        done BOOLEAN NOT NULL DEFAULT false
-      );
-    `);
-    console.log("DB: Postgres listo.");
-  } else {
-    const fs = require("fs");
-    const Database = require("better-sqlite3");
-    const localDbPath = path.join(__dirname, "data", "todos.db");
-    fs.mkdirSync(path.dirname(localDbPath), { recursive: true });
-    db = new Database(localDbPath);
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS todos (
-        id   INTEGER PRIMARY KEY AUTOINCREMENT,
-        text TEXT    NOT NULL,
-        done INTEGER NOT NULL DEFAULT 0
-      );
-    `);
-    console.log("DB: SQLite local lista en", path.join(__dirname, "data", "todos.db"));
-  }
-})().catch(err => console.error("Error inicializando DB:", err));
+added 9 packages, and audited 152 packages in 6s
 
-// ===== HEALTHCHECK =====
-app.get("/health", async (req, res) => {
-  try {
-    if (usePg) { await pool.query("SELECT 1"); }
-    else { db.prepare("SELECT 1").get(); }
-    res.json({ ok: true, db: usePg ? "pg" : "sqlite" });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
+30 packages are looking for funding
+  run `npm fund` for details
 
-// ===== API =====
-app.get("/api/todos", async (req, res) => {
-  try {
-    if (usePg) {
-      const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
-      return res.json(rows);
-    }
-    const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
-      .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
-    return res.json(rows);
-  } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
-});
+found 0 vulnerabilities
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) Reescribir server.js: seguridad, CORS por ALLOWED_ORIGIN, healthcheck y caché estática
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> const express = require("express");
+>> const cors = require("cors");
+>> const helmet = require("helmet");
+>> const rateLimit = require("express-rate-limit");
+>> const compression = require("compression");
+>> const path = require("path");
+>>
+>> const app = express();
+>> app.set("trust proxy", 1);              // necesario en Render para rate limit por IP
+>> app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+>> app.use(compression());
+>> app.use(express.json());
+>>
+>> // ===== CORS =====
+>> const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN; // si no existe, es dev/local
+>> if (ALLOWED_ORIGIN && ALLOWED_ORIGIN !== "*") {
+>>   app.use(cors({ origin: ALLOWED_ORIGIN, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"] }));
+>> } else {
+>>   app.use(cors()); // dev: abierto
+>> }
+>>
+>> // ===== Rate limit solo para API =====
+>> const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
+>> app.use("/api", limiter);
+>>
+>> // ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
+>> const usePg = !!process.env.DATABASE_URL;
+>> let pool, db;
+>>
+>> (async () => {
+>>   if (usePg) {
+>>     const { Pool } = require("pg");
+>>     pool = new Pool({
+>>       connectionString: process.env.DATABASE_URL,
+>>       ssl: { rejectUnauthorized: false },
+>>     });
+>>     await pool.query(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   SERIAL PRIMARY KEY,
+>>         text TEXT    NOT NULL,
+>>         done BOOLEAN NOT NULL DEFAULT false
+>>       );
+>>     `);
+>>     console.log("DB: Postgres listo.");
+>>   } else {
+>>     const fs = require("fs");
+>>     const Database = require("better-sqlite3");
+>>     const localDbPath = path.join(__dirname, "data", "todos.db");
+>>     fs.mkdirSync(path.dirname(localDbPath), { recursive: true });
+>>     db = new Database(localDbPath);
+>>     db.exec(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   INTEGER PRIMARY KEY AUTOINCREMENT,
+>>         text TEXT    NOT NULL,
+>>         done INTEGER NOT NULL DEFAULT 0
+>>       );
+>>     `);
+>>     console.log("DB: SQLite local lista en", path.join(__dirname, "data", "todos.db"));
+>>   }
+>> })().catch(err => console.error("Error inicializando DB:", err));
+>>
+>> // ===== HEALTHCHECK =====
+>> app.get("/health", async (req, res) => {
+>>   try {
+>>     if (usePg) { await pool.query("SELECT 1"); }
+>>     else { db.prepare("SELECT 1").get(); }
+>>     res.json({ ok: true, db: usePg ? "pg" : "sqlite" });
+>>   } catch (e) {
+>>     res.status(500).json({ ok: false, error: e.message });
+>>   }
+>> });
+>>
+>> // ===== API =====
+>> app.get("/api/todos", async (req, res) => {
+>>   try {
+>>     if (usePg) {
+>>       const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
+>>       return res.json(rows);
+>>     }
+>>     const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
+>>       .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
+>>     return res.json(rows);
+>>   } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
+>> });
+>>
+>> app.post("/api/todos", async (req, res) => {
+>>   try {
+>>     const text = (req.body?.text || "").toString().trim();
+>>     if (!text) return res.status(400).json({ error: "text requerido" });
+>>     if (usePg) {
+>>       const { rows } = await pool.query("INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done", [text]);
+>>       return res.json(rows[0]);
+>>     }
+>>     const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
+>>     return res.json({ id: info.lastInsertRowid, text, done: false });
+>>   } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
+>> });
+>>
+>> // Toggle done
+>> app.put("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
+>>     else db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_put_toggle", detail: e.message }); }
+>> });
+>>
+>> // Editar texto
+>> app.patch("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     const text = (req.body?.text || "").toString().trim();
+>>     if (!text) return res.status(400).json({ error: "text requerido" });
+>>     if (usePg) {
+>>       const { rows } = await pool.query("UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done", [text, id]);
+>>       if (!rows.length) return res.status(404).json({ error: "not_found" });
+>>       return res.json(rows[0]);
+>>     } else {
+>>       const r = db.prepare("UPDATE todos SET text = ? WHERE id = ?").run(text, id);
+>>       if (!r.changes) return res.status(404).json({ error: "not_found" });
+>>       const row = db.prepare("SELECT id, text, done FROM todos WHERE id = ?").get(id);
+>>       return res.json({ id: row.id, text: row.text, done: !!row.done });
+>>     }
+>>   } catch (e) { res.status(500).json({ error: "db_patch_text", detail: e.message }); }
+>> });
+>>
+>> // Borrar una
+>> app.delete("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) await pool.query("DELETE FROM todos WHERE id = $1", [id]);
+>>     else db.prepare("DELETE FROM todos WHERE id = ?").run(id);
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_delete_one", detail: e.message }); }
+>> });
+>>
+>> // Borrar completadas
+>> app.delete("/api/todos/completed", async (req, res) => {
+>>   try {
+>>     if (usePg) await pool.query("DELETE FROM todos WHERE done = TRUE");
+>>     else db.prepare("DELETE FROM todos WHERE done = 1").run();
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_delete_completed", detail: e.message }); }
+>> });
+>>
+>> // ===== FRONTEND: estáticos + caché =====
+>> const distPath = path.join(__dirname, "client", "dist");
+>> // Cache agresiva para assets con hash; no-cache para index.html
+>> app.use(express.static(distPath, {
+>>   maxAge: "1y",
+>>   setHeaders: (res, p) => {
+>>     if (p.endsWith("index.html")) {
+>>       res.setHeader("Cache-Control", "no-cache");
+>>     } else if (p.includes(`${path.sep}assets${path.sep}`)) {
+>>       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+>>     }
+>>   }
+>> }));
+>>
+>> // Fallback SPA compatible con Express 5 (sin wildcard)
+>> app.use((req, res, next) => {
+>>   if (req.method === "GET" && !req.path.startsWith("/api")) {
+>>     return res.sendFile(path.join(distPath, "index.html"));
+>>   }
+>>   next();
+>> });
+>>
+>> const PORT = process.env.PORT || 4000;
+>> app.listen(PORT, () =>
+>>   console.log(`Servidor único en http://localhost:${PORT} (DB: ${usePg ? "Postgres" : "SQLite"})`)
+>> );
+>> '@ | Set-Content -Encoding UTF8 $SERVER
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) Actualizar render.yaml: ALLOWED_ORIGIN + healthCheckPath
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> services:
+>>   - type: web
+>>     name: todo-fullstack
+>>     env: node
+>>     plan: free
+>>     buildCommand: npm install && npm run build
+>>     startCommand: npm run server
+>>     healthCheckPath: /health
+>>     autoDeploy: true
+>>     envVars:
+>>       - key: ALLOWED_ORIGIN
+>>         value: https://todo-fullstack-30wd.onrender.com
+>> '@ | Set-Content -Encoding UTF8 $RENDER
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Compilar y push (Render autodeploy por Blueprint)
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
 
-app.post("/api/todos", async (req, res) => {
-  try {
-    const text = (req.body?.text || "").toString().trim();
-    if (!text) return res.status(400).json({ error: "text requerido" });
-    if (usePg) {
-      const { rows } = await pool.query("INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done", [text]);
-      return res.json(rows[0]);
-    }
-    const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
-    return res.json({ id: info.lastInsertRowid, text, done: false });
-  } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
-});
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
 
-// Toggle done
-app.put("/api/todos/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (usePg) await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
-    else db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: "db_put_toggle", detail: e.message }); }
-});
 
-// Editar texto
-app.patch("/api/todos/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    const text = (req.body?.text || "").toString().trim();
-    if (!text) return res.status(400).json({ error: "text requerido" });
-    if (usePg) {
-      const { rows } = await pool.query("UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done", [text, id]);
-      if (!rows.length) return res.status(404).json({ error: "not_found" });
-      return res.json(rows[0]);
-    } else {
-      const r = db.prepare("UPDATE todos SET text = ? WHERE id = ?").run(text, id);
-      if (!r.changes) return res.status(404).json({ error: "not_found" });
-      const row = db.prepare("SELECT id, text, done FROM todos WHERE id = ?").get(id);
-      return res.json({ id: row.id, text: row.text, done: !!row.done });
-    }
-  } catch (e) { res.status(500).json({ error: "db_patch_text", detail: e.message }); }
-});
+up to date, audited 176 packages in 2s
 
-// Borrar una
-app.delete("/api/todos/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (usePg) await pool.query("DELETE FROM todos WHERE id = $1", [id]);
-    else db.prepare("DELETE FROM todos WHERE id = ?").run(id);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: "db_delete_one", detail: e.message }); }
-});
+39 packages are looking for funding
+  run `npm fund` for details
 
-// Borrar completadas
-app.delete("/api/todos/completed", async (req, res) => {
-  try {
-    if (usePg) await pool.query("DELETE FROM todos WHERE done = TRUE");
-    else db.prepare("DELETE FROM todos WHERE done = 1").run();
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: "db_delete_completed", detail: e.message }); }
-});
+found 0 vulnerabilities
 
-// ===== FRONTEND: estáticos + caché =====
-const distPath = path.join(__dirname, "client", "dist");
-// Cache agresiva para assets con hash; no-cache para index.html
-app.use(express.static(distPath, {
-  maxAge: "1y",
-  setHeaders: (res, p) => {
-    if (p.endsWith("index.html")) {
-      res.setHeader("Cache-Control", "no-cache");
-    } else if (p.includes(`${path.sep}assets${path.sep}`)) {
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    }
-  }
-}));
+> client@0.0.0 build
+> vite build
 
-// Fallback SPA compatible con Express 5 (sin wildcard)
-app.use((req, res, next) => {
-  if (req.method === "GET" && !req.path.startsWith("/api")) {
-    return res.sendFile(path.join(distPath, "index.html"));
-  }
-  next();
-});
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.30 kB
+dist/assets/index-CV6lvuN4.css    1.26 kB │ gzip:  0.60 kB
+dist/assets/index-Dx7w1ZYq.js   230.70 kB │ gzip: 76.01 kB
+✓ built in 4.25s
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'render.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server.js', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "chore: seguridad (helmet+rate-limit), CORS por ALLOWED_ORIGIN, /health y caché estática" 2>$null
+[main c52b8b5] chore: seguridad (helmet+rate-limit), CORS por ALLOWED_ORIGIN, /health y caché estática
+ 5 files changed, 637 insertions(+), 40 deletions(-)
+PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
+Enumerating objects: 13, done.
+Counting objects: 100% (13/13), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (7/7), done.
+Writing objects: 100% (7/7), 10.03 KiB | 933.00 KiB/s, done.
+Total 7 (delta 2), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/Leandrotvr/todo-fullstack
+   368e440..c52b8b5  main -> main
+branch 'main' set up to track 'origin/main'.
+PS C:\Users\Leandro\Documents\todo-fullstack> # === RUTAS ===
+PS C:\Users\Leandro\Documents\todo-fullstack> $ROOT   = "C:\Users\Leandro\Documents\todo-fullstack"
+PS C:\Users\Leandro\Documents\todo-fullstack> $SERVER = Join-Path $ROOT "server.js"
+PS C:\Users\Leandro\Documents\todo-fullstack> $RENDER = Join-Path $ROOT "render.yaml"
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 1) Ir a raíz e instalar middlewares de prod
+PS C:\Users\Leandro\Documents\todo-fullstack> Set-Location $ROOT
+PS C:\Users\Leandro\Documents\todo-fullstack> npm install compression helmet express-rate-limit
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () =>
-  console.log(`Servidor único en http://localhost:${PORT} (DB: ${usePg ? "Postgres" : "SQLite"})`)
-);
-'@ | Set-Content -Encoding UTF8 $SERVER
+up to date, audited 152 packages in 3s
 
-# 3) Actualizar render.yaml: ALLOWED_ORIGIN + healthCheckPath
-@'
-services:
-  - type: web
-    name: todo-fullstack
-    env: node
-    plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm run server
-    healthCheckPath: /health
-    autoDeploy: true
-    envVars:
-      - key: ALLOWED_ORIGIN
-        value: https://todo-fullstack-30wd.onrender.com
-'@ | Set-Content -Encoding UTF8 $RENDER
+30 packages are looking for funding
+  run `npm fund` for details
 
-# 4) Compilar y push (Render autodeploy por Blueprint)
-npm run build
-git add .
-git commit -m "chore: seguridad (helmet+rate-limit), CORS por ALLOWED_ORIGIN, /health y caché estática" 2>$null
-git push -u origin main
+found 0 vulnerabilities
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 2) Reescribir server.js: seguridad, CORS por ALLOWED_ORIGIN, healthcheck y caché estática
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> const express = require("express");
+>> const cors = require("cors");
+>> const helmet = require("helmet");
+>> const rateLimit = require("express-rate-limit");
+>> const compression = require("compression");
+>> const path = require("path");
+>>
+>> const app = express();
+>> app.set("trust proxy", 1);              // necesario en Render para rate limit por IP
+>> app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+>> app.use(compression());
+>> app.use(express.json());
+>>
+>> // ===== CORS =====
+>> const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN; // si no existe, es dev/local
+>> if (ALLOWED_ORIGIN && ALLOWED_ORIGIN !== "*") {
+>>   app.use(cors({ origin: ALLOWED_ORIGIN, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"] }));
+>> } else {
+>>   app.use(cors()); // dev: abierto
+>> }
+>>
+>> // ===== Rate limit solo para API =====
+>> const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
+>> app.use("/api", limiter);
+>>
+>> // ===== DB: Postgres si hay DATABASE_URL; sino SQLite local =====
+>> const usePg = !!process.env.DATABASE_URL;
+>> let pool, db;
+>>
+>> (async () => {
+>>   if (usePg) {
+>>     const { Pool } = require("pg");
+>>     pool = new Pool({
+>>       connectionString: process.env.DATABASE_URL,
+>>       ssl: { rejectUnauthorized: false },
+>>     });
+>>     await pool.query(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   SERIAL PRIMARY KEY,
+>>         text TEXT    NOT NULL,
+>>         done BOOLEAN NOT NULL DEFAULT false
+>>       );
+>>     `);
+>>     console.log("DB: Postgres listo.");
+>>   } else {
+>>     const fs = require("fs");
+>>     const Database = require("better-sqlite3");
+>>     const localDbPath = path.join(__dirname, "data", "todos.db");
+>>     fs.mkdirSync(path.dirname(localDbPath), { recursive: true });
+>>     db = new Database(localDbPath);
+>>     db.exec(`
+>>       CREATE TABLE IF NOT EXISTS todos (
+>>         id   INTEGER PRIMARY KEY AUTOINCREMENT,
+>>         text TEXT    NOT NULL,
+>>         done INTEGER NOT NULL DEFAULT 0
+>>       );
+>>     `);
+>>     console.log("DB: SQLite local lista en", path.join(__dirname, "data", "todos.db"));
+>>   }
+>> })().catch(err => console.error("Error inicializando DB:", err));
+>>
+>> // ===== HEALTHCHECK =====
+>> app.get("/health", async (req, res) => {
+>>   try {
+>>     if (usePg) { await pool.query("SELECT 1"); }
+>>     else { db.prepare("SELECT 1").get(); }
+>>     res.json({ ok: true, db: usePg ? "pg" : "sqlite" });
+>>   } catch (e) {
+>>     res.status(500).json({ ok: false, error: e.message });
+>>   }
+>> });
+>>
+>> // ===== API =====
+>> app.get("/api/todos", async (req, res) => {
+>>   try {
+>>     if (usePg) {
+>>       const { rows } = await pool.query("SELECT id, text, done FROM todos ORDER BY id DESC");
+>>       return res.json(rows);
+>>     }
+>>     const rows = db.prepare("SELECT id, text, done FROM todos ORDER BY id DESC").all()
+>>       .map(r => ({ id: r.id, text: r.text, done: !!r.done }));
+>>     return res.json(rows);
+>>   } catch (e) { res.status(500).json({ error: "db_get", detail: e.message }); }
+>> });
+>>
+>> app.post("/api/todos", async (req, res) => {
+>>   try {
+>>     const text = (req.body?.text || "").toString().trim();
+>>     if (!text) return res.status(400).json({ error: "text requerido" });
+>>     if (usePg) {
+>>       const { rows } = await pool.query("INSERT INTO todos (text, done) VALUES ($1, false) RETURNING id, text, done", [text]);
+>>       return res.json(rows[0]);
+>>     }
+>>     const info = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)").run(text);
+>>     return res.json({ id: info.lastInsertRowid, text, done: false });
+>>   } catch (e) { res.status(500).json({ error: "db_post", detail: e.message }); }
+>> });
+>>
+>> // Toggle done
+>> app.put("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) await pool.query("UPDATE todos SET done = NOT done WHERE id = $1", [id]);
+>>     else db.prepare("UPDATE todos SET done = CASE WHEN done=1 THEN 0 ELSE 1 END WHERE id = ?").run(id);
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_put_toggle", detail: e.message }); }
+>> });
+>>
+>> // Editar texto
+>> app.patch("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     const text = (req.body?.text || "").toString().trim();
+>>     if (!text) return res.status(400).json({ error: "text requerido" });
+>>     if (usePg) {
+>>       const { rows } = await pool.query("UPDATE todos SET text = $1 WHERE id = $2 RETURNING id, text, done", [text, id]);
+>>       if (!rows.length) return res.status(404).json({ error: "not_found" });
+>>       return res.json(rows[0]);
+>>     } else {
+>>       const r = db.prepare("UPDATE todos SET text = ? WHERE id = ?").run(text, id);
+>>       if (!r.changes) return res.status(404).json({ error: "not_found" });
+>>       const row = db.prepare("SELECT id, text, done FROM todos WHERE id = ?").get(id);
+>>       return res.json({ id: row.id, text: row.text, done: !!row.done });
+>>     }
+>>   } catch (e) { res.status(500).json({ error: "db_patch_text", detail: e.message }); }
+>> });
+>>
+>> // Borrar una
+>> app.delete("/api/todos/:id", async (req, res) => {
+>>   try {
+>>     const id = Number(req.params.id);
+>>     if (usePg) await pool.query("DELETE FROM todos WHERE id = $1", [id]);
+>>     else db.prepare("DELETE FROM todos WHERE id = ?").run(id);
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_delete_one", detail: e.message }); }
+>> });
+>>
+>> // Borrar completadas
+>> app.delete("/api/todos/completed", async (req, res) => {
+>>   try {
+>>     if (usePg) await pool.query("DELETE FROM todos WHERE done = TRUE");
+>>     else db.prepare("DELETE FROM todos WHERE done = 1").run();
+>>     res.json({ success: true });
+>>   } catch (e) { res.status(500).json({ error: "db_delete_completed", detail: e.message }); }
+>> });
+>>
+>> // ===== FRONTEND: estáticos + caché =====
+>> const distPath = path.join(__dirname, "client", "dist");
+>> // Cache agresiva para assets con hash; no-cache para index.html
+>> app.use(express.static(distPath, {
+>>   maxAge: "1y",
+>>   setHeaders: (res, p) => {
+>>     if (p.endsWith("index.html")) {
+>>       res.setHeader("Cache-Control", "no-cache");
+>>     } else if (p.includes(`${path.sep}assets${path.sep}`)) {
+>>       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+>>     }
+>>   }
+>> }));
+>>
+>> // Fallback SPA compatible con Express 5 (sin wildcard)
+>> app.use((req, res, next) => {
+>>   if (req.method === "GET" && !req.path.startsWith("/api")) {
+>>     return res.sendFile(path.join(distPath, "index.html"));
+>>   }
+>>   next();
+>> });
+>>
+>> const PORT = process.env.PORT || 4000;
+>> app.listen(PORT, () =>
+>>   console.log(`Servidor único en http://localhost:${PORT} (DB: ${usePg ? "Postgres" : "SQLite"})`)
+>> );
+>> '@ | Set-Content -Encoding UTF8 $SERVER
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 3) Actualizar render.yaml: ALLOWED_ORIGIN + healthCheckPath
+PS C:\Users\Leandro\Documents\todo-fullstack> @'
+>> services:
+>>   - type: web
+>>     name: todo-fullstack
+>>     env: node
+>>     plan: free
+>>     buildCommand: npm install && npm run build
+>>     startCommand: npm run server
+>>     healthCheckPath: /health
+>>     autoDeploy: true
+>>     envVars:
+>>       - key: ALLOWED_ORIGIN
+>>         value: https://todo-fullstack-30wd.onrender.com
+>> '@ | Set-Content -Encoding UTF8 $RENDER
+PS C:\Users\Leandro\Documents\todo-fullstack>
+PS C:\Users\Leandro\Documents\todo-fullstack> # 4) Compilar y push (Render autodeploy por Blueprint)
+PS C:\Users\Leandro\Documents\todo-fullstack> npm run build
+
+> todo-fullstack@1.0.0 build
+> cd client && npm install && npm run build
+
+
+up to date, audited 176 packages in 4s
+
+39 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> client@0.0.0 build
+> vite build
+
+vite v7.1.4 building for production...
+✓ 79 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.30 kB
+dist/assets/index-CV6lvuN4.css    1.26 kB │ gzip:  0.60 kB
+dist/assets/index-Dx7w1ZYq.js   230.70 kB │ gzip: 76.01 kB
+✓ built in 4.75s
+PS C:\Users\Leandro\Documents\todo-fullstack> git add .
+warning: in the working copy of 'client/package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'render.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server.js', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\Leandro\Documents\todo-fullstack> git commit -m "chore: seguridad (helmet+rate-limit), CORS por ALLOWED_ORIGIN, /health y caché estática" 2>$null
+[main 683bda6] chore: seguridad (helmet+rate-limit), CORS por ALLOWED_ORIGIN, /health y caché estática
+ 1 file changed, 206 insertions(+), 722 deletions(-)
+PS C:\Users\Leandro\Documents\todo-fullstack> git push -u origin main
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 2.11 KiB | 718.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/Leandrotvr/todo-fullstack
+   c52b8b5..683bda6  main -> main
+branch 'main' set up to track 'origin/main'.
+PS C:\Users\Leandro\Documents\todo-fullstack>
